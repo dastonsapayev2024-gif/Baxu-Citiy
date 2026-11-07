@@ -8,7 +8,10 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return bad(res, 405, 'POST kerak');
   const a = L.auth(req);
-  if (!a) return bad(res, 401, 'Telegram orqali kiring');
+  if (!a) {
+    const why = !req.headers['x-tg-init'] ? 'initData yo‘q (Telegram ma’lumot yubormadi)' : !process.env.BOT_TOKEN ? 'BOT_TOKEN sozlanmagan' : 'imzo mos emas (token boshqa bot tokeni)';
+    return bad(res, 401, 'Telegram orqali kiring: ' + why);
+  }
   let b = req.body;
   try { if (typeof b === 'string') b = JSON.parse(b); } catch (e) { return bad(res, 400, 'Noto‘g‘ri so‘rov'); }
   b = b || {};
