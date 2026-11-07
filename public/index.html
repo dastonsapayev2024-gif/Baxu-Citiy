@@ -360,7 +360,7 @@ try{init3()}catch(e){$('#map').insertAdjacentHTML('afterbegin','<div class="card
 (async()=>{
  const t=setTimeout(()=>{if(!(rp&&rb))$('#app').innerHTML='<div class="card">Ulanib bo‘lmadi. Telegram orqali qayta oching.</div>'},10000);
  try{user=await window.claude.use('user');db=await window.claude.use('db')}catch(e){}
- if(!db||!user){$('#app').innerHTML='<div class="card">Bu o‘yin Telegram orqali ochiladi. Botdagi o‘yin tugmasini bosing.</div>';return}
+ if(!db||!user){$('#app').innerHTML='<div class="card">Bu o‘yin Telegram orqali ochiladi. Botdagi o‘yin tugmasini bosing.<br><small>'+esc(window.__ie||'')+'</small></div>';return}
  uid=await user.id();isAdmin=user.isOwner();setInterval(tickC,1000);setInterval(()=>{if(me)col('players').doc(uid).update({seen:Date.now()}).catch(()=>{})},40000);
  const L=(n,f)=>col(n).onSnapshot(s=>f(s.docs.map(d=>({id:d.id,...d.data()}))),e=>toast(e.message));
  db.doc('config/main').onSnapshot(s=>{if(s.exists)cfg=Object.assign(cfg,s.data());render()});

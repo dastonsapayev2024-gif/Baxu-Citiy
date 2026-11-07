@@ -122,7 +122,7 @@
       uid = r.uid; admin = !!r.admin;
       if (r.appLink) window.APP_LINK = r.appLink;
       return true;
-    }).catch(function (e) { console.error(e); return false; });
+    }).catch(function (e) { console.error(e); window.__ie = String(e && e.message || e); return false; });
     return initP;
   }
   window.claude = {
