@@ -1,0 +1,8 @@
+{
+  "name": "baxu-city",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Baxu City - Telegram Mini App",
+  "dependencies": { "pg": "^8.11.3" },
+  "engines": { "node": ">=18" }
+}
