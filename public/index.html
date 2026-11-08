@@ -93,7 +93,7 @@ const dkey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMont
 const price=(f,g)=>Math.round(cfg.fb*Math.pow(cfg.fm,f)*(g?2:1));
 const tgl=t=>t?`<a href="https://t.me/${esc(String(t).replace('@',''))}" target="_blank">@${esc(String(t).replace('@',''))}</a>`:'<small>nik yo‘q</small>';
 const oname=b=>(players[b.owner]||{}).name||'?';
-const bname=b=>((players[b.owner]||{}).adm?'Baxu':oname(b))+' binosi';
+const bname=b=>b.label?String(b.label):((players[b.owner]||{}).adm?'Baxu':oname(b))+' binosi';
 const mine=()=>Object.entries(bs).filter(([i,b])=>b.owner===uid);
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000)}
 function curM(){let m=me.m;if(!m||m.day!==today())m={day:today(),p:{login:1,tap:0,floor:0,chat:0},c:{}};return JSON.parse(JSON.stringify(m))}
@@ -149,7 +149,7 @@ function ibView(){const I={like:'❤️',coin:'🪙',buy:'🛒'};return `<div cl
 function bcard(id){const b=bs[id],o=players[b.owner]||{},hc=me.hc&&me.hc.day===today()?me.hc.n:0;
  return `<div class="card" style="margin-top:8px"><h3>${esc(b.label||bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗</button></h3>Qavatlar: <b>${b.floors}</b> · ❤️ ${lc(id)}<br>Egasi: <b>${esc(o.name)}</b> ${tgl(o.tg)}${b.sale?`<br><span class="tag">Sotuvda: ${esc(b.sale)}</span>`:''}`+(b.owner===uid?'<br><small>Bu sizning binoingiz</small>':`<div class="row"><button class="${iL(id)?'r':'g'}" style="flex:1" onclick="toggleLike('${id}')">❤️ Layk${iL(id)?' ✓':''}</button><button class="y" style="flex:1" onclick="help('${b.owner}')">🪙 ${GIFT} coin (${hc}/${cfg.hl})</button></div><div class="row">${b.sale?`<button class="big" onclick="buyS='${id}';render()">🛒 Sotib olish — ${esc(b.sale)}</button>`:`<button class="big g" onclick="buyBtn('${id}')">🛒 Sotib olmoqchiman (so‘rash)</button>`}</div>`)+`</div>`+(buyS===id&&b.sale&&b.owner!==uid?buySheet(id):'')}
 const COLORS=['#42a5f5','#26c6da','#66bb6a','#ffa726','#ef5350','#ab47bc','#ec407a','#8d6e63','#78909c','#fdd835'],TYPES=[['glass','Shisha'],['tower','Minora'],['wide','Keng'],['step','Zinapoya']];
-function setLabel(id){updB(id,{label:$('#lb_'+id).value.trim().slice(0,14)})}
+function setLabel(id){updB(id,{label:$('#lb_'+id).value.trim().replace(/\s+/g,' ').slice(0,20)});toast('Bino nomi saqlandi ✅')}
 function fs(){fsOn=!fsOn;$('#map').classList.toggle('fs',fsOn);document.body.style.overflow=fsOn?'hidden':'';setTimeout(()=>{rs();need=1;render()},60)}
 function sell(id){const v=$('#sp_'+id).value.trim(),k=$('#sk_'+id).value.replace(/\s/g,'');if(!v)return toast('Narxni yozing');if(k&&!/^\d{16}$/.test(k))return toast('Karta raqami 16 ta raqam bo‘lishi kerak');updB(id,{sale:v,card:k?k.replace(/(\d{4})(?=\d)/g,'$1 '):''});toast('Sotuvga qo‘yildi')}
 const sellerCards=b=>{const o=players[b.owner]||{};return (o.adm||b.ctr&&o.adm)?cfg.cards:(b.card?[{k:'Karta',n:b.card}]:[])};
@@ -233,7 +233,7 @@ function tickC(){const e=$('#chest'),o=$('#on');if(o)o.textContent='🟢 '+Math.
 function go(t){if(fsOn&&t!=='city')fs();tab=t;sel=null;buyS=null;if(t==='city'&&!fsOn){tab='city';fs();return}render()}
 
 const G=12,PX=Math.PI/180,V={x:0,z:0,d:150,yaw:.6,pitch:52*PX,vx:0,vz:0},pts=new Map(),mc={};
-let MAPR=300,rd,sc,cm,grp,need=1,sig='',pick=[],lw=0,lh=0,g0=null,moved=0,t0=0,posById={},hashDone=0;
+let marks=[],MAPR=300,rd,sc,cm,grp,need=1,sig='',pick=[],lw=0,lh=0,g0=null,moved=0,t0=0,posById={},hashDone=0;
 const cv=(w,h,f)=>{const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'),w,h);return c};
 const rep=t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t};
 function c3(c){if(String(c)[0]==='#')return new THREE.Color(c);const m=String(c).match(/[\d.]+/g)||[200,60,55];return new THREE.Color().setHSL(m[0]/360,m[1]/100,m[2]/100)}
@@ -244,7 +244,7 @@ function init3(){const el=$('#map'),T=THREE;
  grp=new T.Group();sc.add(grp);new ResizeObserver(rs).observe(el);cam();
  const ct=new T.CanvasTexture(cv(128,64,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,2,w/2,h/2,w/2);r.addColorStop(0,'rgba(255,255,255,.95)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h)})),cl=[];
  for(let i=0;i<16;i++){const s=new T.Sprite(new T.SpriteMaterial({map:ct,transparent:true,depthWrite:false,fog:false,opacity:.9})),sz=1.7+Math.random();s.userData.a=Math.random()*6.283;s.userData.r=700+Math.random()*700;s.userData.y=230+Math.random()*150;s.scale.set(150*sz,60*sz,1);sc.add(s);cl.push(s)}
- (function lp(){requestAnimationFrame(lp);if(el.getClientRects().length){if(!pts.size&&Math.abs(V.vx)+Math.abs(V.vz)>.002){V.x+=V.vx;V.z+=V.vz;V.vx*=.8;V.vz*=.8;cam()}cl.forEach(s=>{const u=s.userData;u.a+=.00005;s.position.set(Math.cos(u.a)*u.r,u.y,Math.sin(u.a)*u.r)});rd.render(sc,cm)}})();
+ (function lp(){requestAnimationFrame(lp);if(el.getClientRects().length){if(!pts.size&&Math.abs(V.vx)+Math.abs(V.vz)>.002){V.x+=V.vx;V.z+=V.vz;V.vx*=.8;V.vz*=.8;cam()}marks.forEach(m=>{const k=Date.now()/260;m.position.y=m.userData.by+Math.sin(k)*1;const sc2=1+Math.sin(k*1.3)*.08;m.scale.set(5.2*sc2,6.5*sc2,1)});cl.forEach(s=>{const u=s.userData;u.a+=.00005;s.position.set(Math.cos(u.a)*u.r,u.y,Math.sin(u.a)*u.r)});rd.render(sc,cm)}})();
  el.addEventListener('pointerdown',e=>{if(e.target.closest('.ctl,#fsc,#fst'))return;V.vx=V.vz=0;el.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);if(pts.size===1){moved=0;t0=Date.now()}else moved=99;g0=pair()});
  el.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const o=pts.get(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);
   if(pts.size===1){const dx=e.clientX-o[0],dy=e.clientY-o[1],k=.42*Math.min(V.d,260)/el.clientHeight,k2=k/Math.sin(V.pitch),sn=Math.sin(V.yaw),cs=Math.cos(V.yaw);moved+=Math.abs(dx)+Math.abs(dy);V.vx=(-cs*dx*k-sn*dy*k2)*.5;V.vz=(sn*dx*k-cs*dy*k2)*.5;V.x+=-cs*dx*k-sn*dy*k2;V.z+=sn*dx*k-cs*dy*k2}
@@ -267,8 +267,9 @@ function tapAt(x,y){if(!fsOn)fs();const r=rd.domElement.getBoundingClientRect();
 const winTex=rep(new THREE.CanvasTexture(cv(64,64,(g,w,h)=>{g.fillStyle='#eef6ff';g.fillRect(0,0,w,h);for(let i=0;i<2;i++){const x=4+i*32,gr=g.createLinearGradient(x,6,x+26,h-6);gr.addColorStop(0,'#86bff0');gr.addColorStop(.5,'#2f5f93');gr.addColorStop(1,'#5b95cf');g.fillStyle=gr;g.fillRect(x,6,26,h-14)}})));
 const gTex=rep(new THREE.CanvasTexture(cv(128,128,(g,w,h)=>{g.fillStyle='#656f82';g.fillRect(0,0,w,h);g.fillStyle='#e4dfd2';g.fillRect(19,19,90,90);g.fillStyle='#bcd9a6';g.fillRect(25,25,78,78);g.fillStyle='#fff';for(let k=0;k<128;k+=24){g.fillRect(0,k,2,10);g.fillRect(k,0,10,2)}})));
 function mat(c,g){const k=c+g;return mc[k]||(mc[k]=new THREE.MeshPhongMaterial({map:winTex,color:g?0xffc233:c3(c).lerp(new THREE.Color(0xffffff),.35),specular:g?0xfff0a0:0x99bbdd,shininess:g?130:90,emissive:g?0x3d2a00:0x0a1a2a}))}
-function lab(t,big){const c=cv(256,64,(g,w,h)=>{g.fillStyle='rgba(16,42,67,.85)';g.beginPath();g.roundRect?g.roundRect(4,8,w-8,h-16,22):g.rect(4,8,w-8,h-16);g.fill();g.fillStyle='#fff';g.font=(t.length>15?'600 19px':'600 24px')+' sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(t,w/2,h/2+1)});
+function lab(t,big){const c=cv(256,64,(g,w,h)=>{g.fillStyle='rgba(16,42,67,.85)';g.beginPath();g.roundRect?g.roundRect(4,8,w-8,h-16,22):g.rect(4,8,w-8,h-16);g.fill();g.fillStyle='#fff';g.font=(t.length>24?'600 15px':t.length>15?'600 19px':'600 24px')+' sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(t,w/2,h/2+1)});
  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));s.scale.set(big?14:6,big?3.5:1.5,1);return s}
+function meTex(){return new THREE.CanvasTexture(cv(128,160,(g,w,h)=>{g.lineJoin='round';g.fillStyle='#ff3b30';g.strokeStyle='#fff';g.lineWidth=7;g.beginPath();g.moveTo(24,70);g.lineTo(104,70);g.lineTo(64,150);g.closePath();g.stroke();g.fill();g.beginPath();g.arc(64,50,44,0,7);g.stroke();g.fill();g.fillStyle='#fff';g.font='800 34px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('SIZ',64,52)}))}
 function mk(id,b,x,z){const T=THREE,o=players[b.owner]||{},a=o.adm||b.ctr,g=a||b.gold,ty=a?'glass':(b.type||'glass'),w=a?8.6:ty==='tower'?5.4:ty==='wide'?9:6.8,h=((a?10:3.5)+b.floors*1.4)*(ty==='tower'?1.3:ty==='wide'?.75:1),gr=new T.Group();gr.position.set(x,0,z);posById[id]=[x,z];
  const geo=new T.BoxGeometry(w,h,w),uv=geo.attributes.uv,n=Math.max(1,Math.round(h/2.2));
  for(let i=0;i<uv.count;i++){const f=i>>2;if(f<2||f>3)uv.setXY(i,uv.getX(i)*2,uv.getY(i)*n)}
@@ -278,12 +279,12 @@ function mk(id,b,x,z){const T=THREE,o=players[b.owner]||{},a=o.adm||b.ctr,g=a||b
  if(ty==='step'){const u=new T.Mesh(new T.BoxGeometry(w*.6,h*.35,w*.6),sm);u.position.y=1.2+h+.7+h*.175;gr.add(u)}
  if(ty==='tower'){const sp=new T.Mesh(new T.ConeGeometry(.8,5,8),new T.MeshPhongMaterial({color:g?0xffd54f:0x90a4ae}));sp.position.y=1.2+h+3;gr.add(sp)}
  if(a){const an=new T.Mesh(new T.CylinderGeometry(.25,.4,9,8),new T.MeshPhongMaterial({color:0xff4d6d}));an.position.y=1.2+h+5;gr.add(an)}
- const md=LVI[Math.min(NL,Math.max(1,o.lv||1))-1][1]+' ',nm=md+(a?'★ '+(o.adm?'Baxu':String(b.label||o.name||'?').slice(0,12)):String(b.label||o.name||'?').slice(0,12)),tl=o.adm?(cfg.tg||'Baxu_Uc'):o.tg;const lb=lab(nm+(b.sale?' · SOTUVDA':''),a);lb.position.y=1.2+h+(a?15:3.4);if(a&&tl&&!b.sale){lb.userData.link='https://t.me/'+tl;pick.push(lb)}gr.add(lb);grp.add(gr)}
+ const md=LVI[Math.min(NL,Math.max(1,o.lv||1))-1][1]+' ',nm=md+(a?'★ '+(o.adm?'Baxu':String(b.label||o.name||'?').slice(0,20)):String(b.label||o.name||'?').slice(0,20)),tl=o.adm?(cfg.tg||'Baxu_Uc'):o.tg;const lb=lab(nm+(b.sale?' · SOTUVDA':''),a);lb.position.y=1.2+h+(a?15:3.4);if(a&&tl&&!b.sale){lb.userData.link='https://t.me/'+tl;pick.push(lb)}gr.add(lb);if(b.owner===uid){const my=new T.Sprite(new T.SpriteMaterial({map:meTex(),transparent:true,depthWrite:false,depthTest:false}));my.scale.set(5.2,6.5,1);my.userData.by=1.2+h+(a?23:10);my.position.y=my.userData.by;my.renderOrder=10;gr.add(my);marks.push(my)}grp.add(gr)}
 function build(){const T=THREE,A=e=>(e[1].ctr||(players[e[1].owner]||{}).adm)?1:0;
  const es=Object.entries(bs).sort((a,b)=>A(b)-A(a)||(a[1].ts||0)-(b[1].ts||0)||(a[0]<b[0]?-1:1));
  const sg=JSON.stringify([cfg.tg,es.map(([i,b])=>[i,b.floors,b.gold,b.color,b.type,b.label,b.sale,b.ctr,(players[b.owner]||{}).name,(players[b.owner]||{}).adm,(players[b.owner]||{}).lv])]);if(sg===sig)return;sig=sg;
  while(grp.children.length){const c=grp.children[0];grp.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.isSprite){o.material.map.dispose();o.material.dispose()}})}
- pick=[];posById={};const N=es.length,H=Math.max(21,Math.ceil(Math.sqrt(N)/2)+10),S=(2*H+1)*G;MAPR=S/2;let cells=[];
+ pick=[];marks=[];posById={};const N=es.length,H=Math.max(21,Math.ceil(Math.sqrt(N)/2)+10),S=(2*H+1)*G;MAPR=S/2;let cells=[];
  for(let i=-H;i<=H;i++)for(let j=-H;j<=H;j++)cells.push([i,j]);
  cells=cells.filter(c=>Math.max(Math.abs(c[0]),Math.abs(c[1]))>2||(c[0]===0&&c[1]===0));
  cells.sort((a,b)=>Math.hypot(a[0],a[1])-Math.hypot(b[0],b[1])||Math.atan2(a[1],a[0])-Math.atan2(b[1],b[0]));
@@ -324,7 +325,7 @@ function render(){
  }else if(tab==='mine'){
   h=mine().map(([id,b])=>{const c=price(b.floors,b.gold);
    return `<div class="card"><h3>${esc(bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗 Havola</button></h3><div class="row"><span>Qavatlar: <b>${b.floors}</b></span><span>Keyingi: <b>🪙 ${fmt(c)}</b></span></div><button class="big y" ${me.coins<c?'disabled':''} onclick="buyF('${id}')">Qavat sotib olish</button>${b.gold?'<div class="row"><span class="tag">🥇 Oltin bino</span></div>':`<div class="row"><button class="g" style="width:100%" onclick="goldUp('${id}')">🥇 Oltin qilish — 🪙 ${fmt(cfg.gp)}</button></div>`}
-   <div class="sw" style="margin-top:12px">${COLORS.map(c=>`<i style="background:${c}" onclick="updB('${id}',{color:'${c}'})"></i>`).join('')}</div><div class="row">${TYPES.map(([k,n])=>`<button class="${(b.type||'glass')===k?'':'g'}" style="flex:1;padding:9px 4px" onclick="updB('${id}',{type:'${k}'})">${n}</button>`).join('')}</div><div class="row"><input id="lb_${id}" maxlength="14" placeholder="Bino ustidagi nik" value="${esc(b.label||'')}"><button onclick="setLabel('${id}')">Saqlash</button></div>
+   <div class="sw" style="margin-top:12px">${COLORS.map(c=>`<i style="background:${c}" onclick="updB('${id}',{color:'${c}'})"></i>`).join('')}</div><div class="row">${TYPES.map(([k,n])=>`<button class="${(b.type||'glass')===k?'':'g'}" style="flex:1;padding:9px 4px" onclick="updB('${id}',{type:'${k}'})">${n}</button>`).join('')}</div><div class="row"><input id="lb_${id}" maxlength="20" placeholder="Bino nomi (xohlagan nom, 20 belgigacha)" value="${esc(b.label||'')}"><button onclick="setLabel('${id}')">Saqlash</button></div>
    <div class="row" style="margin-top:12px">${b.sale?`<span class="tag">Sotuvda: ${esc(b.sale)}</span><button class="g" onclick="updB('${id}',{sale:''})">Sotuvdan olish</button>`:`<input id="sp_${id}" placeholder="Narx (masalan 50 000 so‘m)"></div><div class="row"><input id="sk_${id}" inputmode="numeric" maxlength="19" placeholder="Pul tushadigan karta raqamingiz (16 raqam)"><button onclick="sell('${id}')">Sotuvga</button>`}</div></div>`}).join('')||'<div class="card">Sizda bino yo‘q. Savdo bo‘limidan sotib oling.</div>';
   h+=`<div class="card"><h3>⚙️ Sozlamalar</h3><small>Nikingiz shaharda hamma ko‘radigan nom</small><div class="row"><input id="nk2" maxlength="20" value="${esc(me.name||'')}" placeholder="Nikingiz"><button onclick="saveNick()">Saqlash</button></div></div>`;
   h+=`<div class="card"><h3>✈️ Telegramni bog‘lash</h3><small>${me.tg?'✅ Bog‘langan: @'+esc(me.tg):'Bog‘lanmagan'} · bitta Telegram nik faqat bitta o‘yinchiga bog‘lanadi</small><div class="row"><input id="tgi" value="${esc(me.tg||'')}" placeholder="@nik"><button onclick="saveTg()">Saqlash</button></div></div>`;
