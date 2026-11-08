@@ -3,6 +3,32 @@ const crypto = require('crypto');
 const L = require('../lib/server');
 
 const bad = (res, code, msg) => res.status(code).json({ error: msg });
+// ---- Telegram bildirishnoma (inbox -> botdan xabar) ----
+const ICON = { like: '❤️', coin: '🪙', buy: '🛒', deal: '🎉', no: '❌' };
+const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+async function pushTg(pool, nd) {
+  try {
+    const token = String(process.env.BOT_TOKEN || '').replace(/\s+/g, '');
+    if (!token || !nd || typeof nd.to !== 'string' || !/^tg\d{1,15}$/.test(nd.to) || nd.to === nd.from) return;
+    if (nd.type === 'like' || nd.type === 'coin') {
+      const r = await pool.query("select count(*)::int n from docs where col='inbox' and data->>'to'=$1 and data->>'from'=$2 and data->>'type'=$3 and updated>$4", [nd.to, String(nd.from), nd.type, Date.now() - 30 * 60 * 1000]);
+      if (r.rows[0].n > 1) return;
+    }
+    const nick = /^[A-Za-z0-9_]{3,32}$/.test(String(nd.fromTg || '').replace('@', '')) ? String(nd.fromTg).replace('@', '') : '';
+    const text = (ICON[nd.type] || '🔔') + ' <b>' + esc(String(nd.fromName || 'O‘yinchi').slice(0, 40)) + '</b>\n' + esc(String(nd.text || '').slice(0, 300));
+    const row = [];
+    const app = String(process.env.APP_LINK || '').replace(/\?startapp=.*$/, '');
+    if (nick) row.push({ text: '💬 @' + nick + ' bilan gaplashish', url: 'https://t.me/' + nick });
+    if (app) row.push({ text: '🎮 O‘yinni ochish', url: app });
+    const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 2500);
+    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, signal: ac.signal,
+      body: JSON.stringify({ chat_id: nd.to.slice(2), text, parse_mode: 'HTML', disable_web_page_preview: true, reply_markup: row.length ? { inline_keyboard: row.map(b => [b]) } : undefined })
+    }).catch(() => {});
+    clearTimeout(tm);
+  } catch (e) { /* bildirishnoma xato bersa, o'yin ishlashiga xalaqit bermaydi */ }
+}
+
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -72,6 +98,7 @@ module.exports = async (req, res) => {
           'insert into docs(col,id,data,updated) values($1,$2,$3,$4) on conflict(col,id) do update set data=excluded.data,updated=excluded.updated',
           [col, id, JSON.stringify(nd), Date.now()]);
         await cl.query('commit');
+        if (col === 'inbox' && b.op === 'add') await pushTg(pool, nd);
         return res.json({ ok: true, id });
       } catch (e) { try { await cl.query('rollback'); } catch (_) {} throw e; }
       finally { cl.release(); }
