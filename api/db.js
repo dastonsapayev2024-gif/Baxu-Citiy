@@ -64,7 +64,7 @@ module.exports = async (req, res) => {
         let nd = null;
         if (b.op === 'update') { if (!old) { await cl.query('rollback'); return bad(res, 404, 'Topilmadi'); } nd = Object.assign({}, old, patch); }
         else if (b.op !== 'delete') nd = patch;
-        if (nd && JSON.stringify(nd).length > 30000) { await cl.query('rollback'); return bad(res, 413, 'Juda katta'); }
+        if (nd && JSON.stringify(nd).length > (col === 'orders' ? 150000 : 30000)) { await cl.query('rollback'); return bad(res, 413, 'Juda katta'); }
         if (!L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
         if (b.op === 'delete') await cl.query('delete from docs where col=$1 and id=$2', [col, id]);
         else await cl.query(
