@@ -35,7 +35,8 @@ module.exports = async (req, res) => {
         const o = vs[c];
         if (o && o.v === k.v && o.n === k.n) continue;
         const d = await pool.query('select id,data from docs where col=$1 order by updated desc limit 1500', [c]);
-        out[c] = { v: k.v, n: k.n, docs: d.rows.filter(x => L.visible(c, x.data, a)).map(x => ({ id: x.id, data: x.data })) };
+        const slim = x => (c === 'orders' || c === 'reqs') && x.data && x.data.rc ? Object.assign({}, x.data, { rc: 1 }) : x.data;
+        out[c] = { v: k.v, n: k.n, docs: d.rows.filter(x => L.visible(c, x.data, a)).map(x => ({ id: x.id, data: slim(x) })) };
       }
       return res.json({ cols: out });
     }
