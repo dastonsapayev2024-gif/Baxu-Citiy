@@ -130,13 +130,13 @@ const GIFT=40;
 function notify(to,type,text,coins){col('inbox').add({to,from:uid,fromName:me.name,fromTg:me.tg||'',type,text,coins:coins||0,ts:Date.now(),read:false}).catch(()=>{})}
 function help(o){const h=me.hc&&me.hc.day===today()?me.hc.n:0;if(h>=cfg.hl)return toast('Bugungi limit tugadi');if(me.coins<GIFT)return toast('Coin yetarli emas');const t=players[o];if(!t||o===uid)return;
  col('players').doc(o).update({coins:t.coins+GIFT});notify(o,'coin',me.name+' sizga '+GIFT+' coin berdi',GIFT);upd({coins:me.coins-GIFT,hc:{day:today(),n:h+1},m:prog('help')});toast(GIFT+' coin yuborildi')}
-const lc=id=>lk.filter(x=>x.b===id).length,iL=id=>lk.some(x=>x.id===id+'_'+uid),vc=id=>lk.filter(x=>x.vb===id).length;
+const lc=id=>lk.filter(x=>x.b===id).length,iL=id=>lk.some(x=>x.id===id+'_'+uid),vc=id=>lk.reduce((n,x)=>n+((x.vv&&x.v&&x.v[id])?x.v[id][0]:0),0);
 const rankOf=id=>{const l=Object.entries(bs).sort((a,b)=>(b[1].floors||0)-(a[1].floors||0)||(a[1].ts||0)-(b[1].ts||0));const i=l.findIndex(x=>x[0]===id);return i<0?0:i+1};
 const statsBox=id=>{const b=bs[id];if(!b)return'';const c=(t,l)=>`<div style="flex:1;text-align:center;padding:8px 2px;border-radius:12px;background:var(--bg)"><div style="font-size:20px;font-weight:800">${t}</div><small>${l}</small></div>`;return `<div style="display:flex;gap:6px;margin:8px 0">${c(b.floors,'qavat')}${c(lc(id),'layk')}${c(vc(id),'kirish')}${c('#'+rankOf(id),'balandlik')}</div>`};
 function toggleLike(id){const b=bs[id];if(!b||b.owner===uid)return toast('O‘z binongizga layk bosib bo‘lmaydi');const d=col('likes').doc(id+'_'+uid);if(iL(id))return d.delete();
  d.set({b:id,uid,ts:Date.now()});notify(b.owner,'like',me.name+' binoingizga layk bosdi ❤️');const m=curM();m.lk=m.lk||[];if(!m.lk.includes(id)){m.lk.push(id);m.p.like=(m.p.like||0)+1;upd({m})}}
 function buyBtn(id){const b=bs[id];if(!b||b.owner===uid)return;if(b.sale)reqBuy(id);notify(b.owner,'buy',me.name+(b.sale?' binoingizni sotib olish so‘rovini yubordi ('+b.sale+')':' binoingizni sotib olmoqchi'));toast('So‘rov egasiga yuborildi')}
-function visitB(id){const b=bs[id];if(!me||!b||b.owner===uid)return;{const vid='v_'+id+'_'+uid+'_'+today();if(!lk.some(x=>x.id===vid))col('likes').doc(vid).set({vb:id,uid,ts:Date.now()}).catch(()=>{})}const m=curM();m.v=m.v||[];if(m.v.includes(id))return;m.v.push(id);m.p.visit=(m.p.visit||0)+1;upd({m})}
+function visitB(id){const b=bs[id];if(!me||!b||b.owner===uid)return;{const vid='vv_'+uid,mine=lk.find(x=>x.id===vid),v=Object.assign({},mine&&mine.v),e=v[id]||[0,''];if(e[1]!==today()){v[id]=[e[0]+1,today()];if(mine)mine.v=v;else lk.push({id:vid,uid,vv:1,v});col('likes').doc(vid).set({uid,vv:1,v}).catch(()=>{})}}const m=curM();m.v=m.v||[];if(m.v.includes(id))return;m.v.push(id);m.p.visit=(m.p.visit||0)+1;upd({m})}
 const inv=()=>Object.values(players).filter(p=>p.ref===uid&&p.ts&&dkey(p.ts)===today()).length;
 const refId=()=>refCode&&Object.keys(players).find(i=>bcode(i)===refCode&&i!==uid);
 const shareMark=()=>{if(!(curM().p.share))upd({m:prog('share')})};
@@ -181,9 +181,11 @@ function saveC(p,msg){if(!isAdmin)return;const n=Object.assign({},cfg,p);db.doc(
 function saveCfg(){const g=k=>+$('#'+k).value;saveC({fb:g('fb'),fm:g('fm'),gp:g('gp'),ha:g('ha'),hl:g('hl'),tg:$('#tg').value.trim().replace('@',''),mr:Object.fromEntries(MIS.map(x=>[x[0],g('r_'+x[0])]))},'Iqtisodiyot sozlamalari')}
 const pks=()=>cfg.packs||PACKS,pPrice=p=>Math.round(p[2]*4*(1-p[3]/100)),T0=ts=>new Date(ts).toLocaleString('ru');
 function cp(t){try{navigator.clipboard.writeText(t).then(()=>toast('Nusxalandi')).catch(()=>prompt('Nusxalang:',t))}catch(e){prompt('Nusxalang:',t)}}
-function showChek(id){const o=ords.find(x=>x.id===id);if(!o||!o.rc)return;const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:999;background:#000d;display:flex;align-items:center;justify-content:center;padding:12px';d.onclick=()=>d.remove();d.innerHTML='<img src="'+o.rc+'" style="max-width:100%;max-height:100%;border-radius:8px">';document.body.appendChild(d)}
+function showImg(src){const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:999;background:#000d;display:flex;align-items:center;justify-content:center;padding:12px';d.onclick=()=>d.remove();d.innerHTML='<img src="'+src+'" style="max-width:100%;max-height:100%;border-radius:8px">';document.body.appendChild(d)}
+function getRc(c,id){toast('Chek yuklanmoqda…');db.doc(c+'/'+id).get().then(r=>{const d=r.exists&&r.data();if(d&&d.rc&&String(d.rc).length>10)showImg(d.rc);else toast('Chek topilmadi')}).catch(e=>toast(e.message))}
+function showChek(id){getRc('orders',id)}
 let bchek='';const showPrev=(q,d)=>{const p=$(q);if(p){p.src=d;p.style.display='block'}};
-function showRc(id){const r=reqs.find(x=>x.id===id);if(!r||!r.rc)return;const d=document.createElement('div');d.style.cssText='position:fixed;inset:0;z-index:999;background:#000d;display:flex;align-items:center;justify-content:center;padding:12px';d.onclick=()=>d.remove();d.innerHTML='<img src="'+r.rc+'" style="max-width:100%;max-height:100%;border-radius:8px">';document.body.appendChild(d)}
+function showRc(id){getRc('reqs',id)}
 let chek='';function openShop(i){chek='';shop={i,card:0};render();scrollTo(0,0)}
 function pickChek(inp){const f=inp.files&&inp.files[0];if(!f)return;if(!/^image\//.test(f.type))return toast('Faqat rasm yuboring');const im=new Image(),u=URL.createObjectURL(f);im.onload=()=>{let sc=Math.min(1,720/Math.max(im.width,im.height)),q=.6,d='';for(let k=0;k<7;k++){const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);c.getContext('2d').drawImage(im,0,0,c.width,c.height);d=c.toDataURL('image/jpeg',q);if(d.length<95000)break;sc*=.8;q=Math.max(.4,q-.05)}URL.revokeObjectURL(u);if(d.length>=120000)return toast('Rasm juda katta, boshqasini tanlang');if(inp.dataset.t==='b'){bchek=d;showPrev('#bchp',d)}else{chek=d;showPrev('#chp',d)}toast('Chek tanlandi ✅')};im.onerror=()=>toast('Rasm ochilmadi');im.src=u}
 function paid(){if(!shop||!me)return;if(!chek)return toast('Avval to‘lov chekini (rasmini) yuklang');if(cfg.shopOn===false)return toast('Do‘kon yopiq');
@@ -406,8 +408,9 @@ document.addEventListener('click',e=>{if(e.target.closest('button,a.pk,.cd'))snd
 {const ot=window.toast;window.toast=function(t){if(/yetarli|limit|xato|noto|kutilayotgan|yopiq|bo‘lishi kerak|sotuvda emas/i.test(String(t)))snd('err');else if(/📨/.test(String(t)))snd('msg');return ot.apply(this,arguments)}}
 sndUI();
 try{init3()}catch(e){$('#map').insertAdjacentHTML('afterbegin','<div class="card">3D yuklanmadi: '+esc(e.message)+'</div>')}
+{const of=window.fetch;window.fetch=function(){return of.apply(this,arguments).then(r=>{if(!r.ok)window.__se=r.status+' '+r.statusText;return r},e=>{window.__se='tarmoq: '+(e&&e.message||e);throw e})}}
 (async()=>{
- const t=setTimeout(()=>{if(!(rp&&rb))$('#app').innerHTML='<div class="card">Ulanib bo‘lmadi. Telegram orqali qayta oching.</div>'},10000);
+ const t=setTimeout(()=>{if(!(rp&&rb))$('#app').innerHTML='<div class="card">Ulanib bo‘lmadi. Telegram orqali qayta oching.<br><small>'+esc(window.__se||window.__ie||'')+'</small></div>'},10000);
  try{user=await window.claude.use('user');db=await window.claude.use('db')}catch(e){}
  if(!db||!user){$('#app').innerHTML='<div class="card">Bu o‘yin Telegram orqali ochiladi. Botdagi o‘yin tugmasini bosing.<br><small>'+esc(window.__ie||'')+'</small></div>';return}
  uid=await user.id();isAdmin=user.isOwner();setInterval(tickC,1000);setInterval(()=>{if(me)col('players').doc(uid).update({seen:Date.now()}).catch(()=>{})},40000);
