@@ -15,7 +15,7 @@
     } catch (e) {}
   }
 
-  var wseq = 0, busy = false, timer = null, uid = null, admin = false;
+  var wseq = 0, busy = false, timer = null, uid = null, admin = false, idle = 0;
   var cache = {}, ver = {}, subs = {};
 
   function api(body) {
@@ -65,15 +65,26 @@
     var s0 = wseq;
     api({ op: 'sync', v: ver }).then(function (j) {
       if (s0 !== wseq) return;
-      Object.keys(j.cols || {}).forEach(function (c) {
-        ver[c] = { v: j.cols[c].v, n: j.cols[c].n };
-        cache[c] = j.cols[c].docs;
+      var ks = Object.keys(j.cols || {}), redo = false;
+      idle = ks.length ? 0 : Math.min(idle + 1, 30);
+      ks.forEach(function (c) {
+        var x = j.cols[c];
+        ver[c] = { v: x.v, n: x.n };
+        if (x.delta && cache[c]) {
+          var ids = {};
+          x.docs.forEach(function (d) { ids[d.id] = 1; });
+          cache[c] = x.docs.concat(cache[c].filter(function (d) { return !ids[d.id]; }));
+          // Hujjat o'chirilgan yoki yetishmasa: to'liq qayta yuklash
+          if (cache[c].length > x.n || cache[c].length < Math.min(x.n, 1500)) { delete ver[c]; redo = true; }
+        } else cache[c] = x.docs;
         emit(c);
       });
+      if (redo) kick(0);
     }).catch(errAll).then(function () { busy = false; });
   }
   function kick(ms) { setTimeout(sync, ms || 0); }
-  function start() { if (!timer) timer = setInterval(sync, 3000); kick(0); }
+  function tick() { sync(); timer = setTimeout(tick, idle > 10 ? 6000 : 3000); }
+  function start() { if (!timer) { timer = 1; tick(); } else kick(0); }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) kick(0); });
 
   function sub(c, q, id, cb, eb) {
