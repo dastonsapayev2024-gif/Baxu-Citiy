@@ -86,7 +86,7 @@ const bcode=id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return h
 function copyLink(id){const u=LNK('b-'+bcode(id));try{navigator.clipboard.writeText(u).then(()=>toast('Havola nusxalandi')).catch(()=>prompt('Havola:',u))}catch(e){prompt('Havola:',u)}}
 const MIS=[['login','O‘yinga kirish',1,150],['tap','30 mijozga xizmat ko‘rsat',30,600],['floor','Qavat sotib ol',1,400],['chat','Chatga yozish',1,100],['help','3 ta binoga 40 coin ber',3,400],['col','Sandiqdan 3 marta coin ol',3,300],['chest','2 soatlik sovg‘a sandig‘ini och',1,400],['like','3 ta binoga layk bos',3,300],['visit','3 ta boshqa binoni ko‘r',3,250],['share','Do‘stlarga havola yubor',1,300],['invite','3 ta do‘st chaqir',3,5000]];
 const mrw=id=>cfg.mr&&cfg.mr[id]!=null?cfg.mr[id]:(MIS.find(x=>x[0]===id)||[0,0,0,0])[3];
-const TABS=[['city','🏙️','Harita'],['mine','🏢','Binolarim'],['coin','🛍️','Do‘kon'],['mis','🎯','Missiya'],['top','🏆','Reyting'],['trade','🤝','Savdo'],['lv','📈','Daraja']];
+const TABS=[['city','🏙️','Harita'],['mine','🏢','Binolarim'],['mis','🎯','Missiya'],['top','🏆','Reyting'],['trade','🤝','Savdo'],['coin','🛍️','Do‘kon'],['lv','📈','Daraja']];
 const $=s=>document.querySelector(s),col=n=>db.collection(n);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dkey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},today=()=>dkey(Date.now()),fmt=n=>(+n).toLocaleString('ru');
