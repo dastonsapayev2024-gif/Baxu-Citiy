@@ -84,11 +84,12 @@ const refCode=(location.hash.match(/^#r-([a-z0-9]+)$/)||[])[1];
 const PACKS=[['👛','Hamyon',2500,20],['👜','Xalta',5000,25],['🧰','Xazina',13000,30],['💎','Katta xazina',35000,40],['👑','Shoh xazinasi',45000,45]];
 const bcode=id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return h.toString(36)};
 function copyLink(id){const u=LNK('b-'+bcode(id));try{navigator.clipboard.writeText(u).then(()=>toast('Havola nusxalandi')).catch(()=>prompt('Havola:',u))}catch(e){prompt('Havola:',u)}}
-const MIS=[['login','O‘yinga kirish',1,150],['tap','30 mijozga xizmat ko‘rsat',30,600],['floor','Qavat sotib ol',1,400],['chat','Chatga yozish',1,100],['help','10 ta odamga yordam ber (40 coin)',10,900],['col','Sandiqdan 3 marta coin ol',3,300],['chest','2 soatlik sovg‘a sandig‘ini och',1,400],['like','3 ta binoga layk bos',3,300],['visit','3 ta boshqa binoni ko‘r',3,250],['share','Do‘stlarga havola yubor',1,300],['invite','3 ta do‘st chaqir',3,5000]];
+const MIS=[['login','O‘yinga kirish',1,150],['tap','40 mijozga xizmat ko‘rsat',40,600],['floor','Qavat sotib ol',1,400],['chat','Chatga yozish',1,100],['help','10 ta odamga yordam ber (40 coin)',10,900],['col','Sandiqdan 3 marta coin ol',3,300],['chest','2 soatlik sovg‘a sandig‘ini och',1,400],['like','3 ta binoga layk bos',3,300],['visit','3 ta boshqa binoni ko‘r',3,250],['share','Do‘stlarga havola yubor',1,300],['invite','3 ta do‘st chaqir',3,5000]];
 const mrw=id=>id==='help'?900:cfg.mr&&cfg.mr[id]!=null?cfg.mr[id]:(MIS.find(x=>x[0]===id)||[0,0,0,0])[3];
 const TABS=[['city','🏙️','Harita'],['mine','🏢','Binolarim'],['mis','🎯','Missiya'],['top','🏆','Reyting'],['trade','🤝','Savdo'],['coin','🛍️','Do‘kon'],['lv','📈','Daraja']];
 const $=s=>document.querySelector(s),col=n=>db.collection(n);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const mper=()=>{const d=new Date();return dkey(d.getTime())+(d.getHours()<12?'a':'b')},mstart=()=>{const d=new Date();d.setHours(d.getHours()<12?0:12,0,0,0);return d.getTime()},mnext=()=>{const d=new Date(mstart());d.setHours(d.getHours()+12);return d.getTime()};
 const dkey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},today=()=>dkey(Date.now()),fmt=n=>(+n).toLocaleString('ru');
 const price=(f,g)=>{const b0=Math.max(1,+cfg.fb||100),st=(5000-b0)/24;return Math.round((b0+Math.max(0,f-1)*st)/10)*10*(g?2:1)};
 const tgl=t=>t?`<a href="https://t.me/${esc(String(t).replace('@',''))}" target="_blank">@${esc(String(t).replace('@',''))}</a>`:'<small>nik yo‘q</small>';
@@ -96,7 +97,7 @@ const oname=b=>(players[b.owner]||{}).name||'?';
 const bname=b=>b.label?String(b.label):((players[b.owner]||{}).adm?'Baxu':oname(b))+' binosi';
 const mine=()=>Object.entries(bs).filter(([i,b])=>b.owner===uid);
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000)}
-function curM(){let m=me.m;if(!m||m.day!==today())m={day:today(),p:{login:1,tap:0,floor:0,chat:0},c:{}};return JSON.parse(JSON.stringify(m))}
+function curM(){let m=me.m;if(!m||m.day!==mper())m={day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}};return JSON.parse(JSON.stringify(m))}
 function upd(p){Object.assign(me,p);players[uid]=me;render();return col('players').doc(uid).update(p).catch(e=>toast(e.message))}
 function updB(id,p){Object.assign(bs[id],p);render();return col('b').doc(id).update(p).catch(e=>toast(e.message))}
 function prog(id,n=1){const m=curM();m.p[id]=(m.p[id]||0)+n;return m}
@@ -104,7 +105,7 @@ function nickOk(n){return !Object.entries(players).some(([i,p])=>i!==uid&&String
 function tgAuto(){try{const u=window.Telegram.WebApp.initDataUnsafe.user;const t=u&&u.username?String(u.username):'';return t&&tgOk(t)?t:''}catch(e){return ''}}
 function join(){const n=$('#nick').value.trim().replace(/\s+/g,' ').slice(0,20);if(n.length<2)return toast('Nik kamida 2 ta belgi bo‘lsin');if(!isAdmin&&!nickOk(n))return toast('Bu nik band, boshqasini tanlang');const t=tgAuto();
  const c=`hsl(${Math.random()*360|0} 65% 55%)`;
- col('players').doc(uid).set({name:isAdmin?'Baxu':n,tg:t,coins:300,color:c,blocked:false,adm:isAdmin,nb:true,ad:1,ald:today(),...(refId()?{ref:refId()}:{}),m:{day:today(),p:{login:1,tap:0,floor:0,chat:0},c:{}},hc:{day:'',n:0},ts:Date.now(),st:Date.now(),ct:Date.now()});
+ col('players').doc(uid).set({name:isAdmin?'Baxu':n,tg:t,coins:300,color:c,blocked:false,adm:isAdmin,nb:true,ad:1,ald:today(),...(refId()?{ref:refId()}:{}),m:{day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}},hc:{day:'',n:0},ts:Date.now(),st:Date.now(),ct:Date.now()});
  col('b').doc(uid).set({owner:uid,floors:1,color:c,sale:'',ts:Date.now()})}
 function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(!me.st){p.st=Date.now();p.ct=Date.now()}
@@ -114,7 +115,7 @@ function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(isAdmin&&!me.ci&&bs[uid]){p.ci=1;col('b').doc(uid).update({ctr:true,sale:'200 000 so‘m'}).catch(()=>{})}
  if(Object.keys(p).length)col('players').doc(uid).update(p)}
 function buyF(id){const b=bs[id],c=price(b.floors,b.gold);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+1});upd({coins:me.coins-c,m:prog('floor')});toast('Yangi qavat! 🎉')}
-const SG=5000,CAP=200,CG=1e4,CCAP=30,CRATE=[10,5,3];
+const SG=5000,CAP=200,CG=3e3,CCAP=40,CRATE=[10,5,3];
 const srN=()=>me&&me.sr&&me.sr.d===today()?me.sr.n:0;
 const stored=()=>me&&me.st?Math.min(CAP,Math.floor((Date.now()-me.st)/SG)):0;
 const waiting=()=>me&&me.ct?Math.min(CCAP,Math.floor((Date.now()-me.ct)/CG)):0;
@@ -142,7 +143,7 @@ function toggleLike(id){const b=bs[id];if(!b||b.owner===uid)return toast('O‘z 
  col('likes').doc(k).set(dd).catch(e=>toast((e&&e.message)||'Layk saqlanmadi'));notify(b.owner,'like',me.name+' binoingizga layk bosdi ❤️');const m=curM();m.lk=m.lk||[];if(!m.lk.includes(id)){m.lk.push(id);m.p.like=(m.p.like||0)+1;upd({m})}try{render()}catch(e){}}
 function buyBtn(id){const b=bs[id];if(!b||b.owner===uid)return;if(b.sale)reqBuy(id);notify(b.owner,'buy',me.name+(b.sale?' binoingizni sotib olish so‘rovini yubordi ('+b.sale+')':' binoingizni sotib olmoqchi'));toast('So‘rov egasiga yuborildi')}
 function visitB(id){const b=bs[id];if(!me||!b||b.owner===uid)return;{const vid='vv_'+uid,mine=lk.find(x=>x.id===vid),v=Object.assign({},mine&&mine.v),e=v[id]||[0,''];if(e[1]!==today()){v[id]=[e[0]+1,today()];if(mine)mine.v=v;else lk.push({id:vid,uid,vv:1,v});col('likes').doc(vid).set({uid,vv:1,v}).catch(()=>{})}}const m=curM();m.v=m.v||[];if(m.v.includes(id))return;m.v.push(id);m.p.visit=(m.p.visit||0)+1;upd({m})}
-const inv=()=>Object.values(players).filter(p=>p.ref===uid&&p.ts&&dkey(p.ts)===today()).length;
+const inv=()=>Object.values(players).filter(p=>p.ref===uid&&p.ts&&p.ts>=mstart()).length;
 const refId=()=>refCode&&Object.keys(players).find(i=>bcode(i)===refCode&&i!==uid);
 const shareMark=()=>{if(!(curM().p.share))upd({m:prog('share')})};
 const copyInv=()=>{cp(LNK('r-'+bcode(uid)));shareMark()};
@@ -248,7 +249,7 @@ function alerts(){const a={};if(!me)return a;const m=curM();
 function dots(){const al=alerts();document.querySelectorAll('nav button[data-t],#tq button[data-t]').forEach(b=>b.classList.toggle('dot',!!al[b.dataset.t]))}
 function tickC(){const e=$('#chest'),o=$('#on');if(o)o.textContent='🟢 '+Math.max(1,Object.values(players).filter(p=>(p.seen||0)>Date.now()-90000).length)+' onlayn';const LV=$('#live');if(LV){const rl=Object.values(players).filter(p=>p.ts).sort((a,b)=>b.ts-a.ts).slice(0,5);if(rl.length){const p=rl[Math.floor(Date.now()/4000)%rl.length];LV.style.display='flex';if(LV.dataset.k!==p.id){LV.dataset.k=p.id;LV.innerHTML='<span class="jn">JONLI</span>🏠 <b>'+esc(p.name)+'</b>'+(p.tg?' (@'+esc(p.tg)+')':'')+' shaharga qo‘shildi, uyi qurildi'}}}if(!me)return;
  if(e){const l=chestLeft();e.textContent=l?'🎁 '+[l/36e5|0,(l/6e4|0)%60,(l/1e3|0)%60].map(n=>String(n).padStart(2,'0')).join(':'):'🎁 Ochish!';e.style.opacity=l?.7:1}
- const a=stored(),w=waiting(),S=(k,v)=>{const x=$('#'+k);if(x)x.textContent=v};S('stv',a+'/'+CAP);S('cw',w);{const n=srN(),ci=$('#cinfo'),cw=$('#cwb');if(cw)cw.style.width=w/CCAP*100+'%';if(ci){const R=CRATE[Math.min(n,CRATE.length-1)];ci.textContent='Har 10 soniyada 1 mijoz keladi. '+CCAP+' ta to‘lgach «Olish» ni bosing: har mijozga '+R+' coin (jami '+CCAP*R+'). Bugun: '+n+' marta xizmat qildingiz'+(n>=CRATE.length?' (narx '+R+' coin)':'')}}
+ const a=stored(),w=waiting(),S=(k,v)=>{const x=$('#'+k);if(x)x.textContent=v};S('stv',a+'/'+CAP);S('cw',w);{const n=srN(),ci=$('#cinfo'),cw=$('#cwb');if(cw)cw.style.width=w/CCAP*100+'%';if(ci){const R=CRATE[Math.min(n,CRATE.length-1)];ci.textContent='Har 3 soniyada 1 mijoz keladi. '+CCAP+' ta to‘lgach «Olish» ni bosing: har mijozga '+R+' coin (jami '+CCAP*R+'). Bugun: '+n+' marta xizmat qildingiz'+(n>=CRATE.length?' (narx '+R+' coin)':'')}}
  const b=$('#stb');if(b)b.style.width=a/CAP*100+'%';const sb=$('#stbtn');if(sb)sb.disabled=!a;const cb=$('#cbtn');if(cb)cb.disabled=w<CCAP;dots()}
 function go(t){if(fsOn&&t!=='city')fs();tab=t;sel=null;buyS=null;if(t==='city'&&!fsOn){tab='city';fs();return}render()}
 
@@ -370,7 +371,7 @@ function render(){
   h=`<div class="card"><h3>🛍️ Coin Shop</h3><div style="font-size:30px;font-weight:800">🪙 ${fmt(me.coins)}</div><small>Paketni tanlang → kartaga pul o‘tkazing → «TO‘LOV QILDIM» ni bosing. Admin to‘lovni tekshirib tasdiqlasa, coin hisobingizga tushadi.</small></div>`+(cfg.shopOn===false?'<div class="card">Do‘kon vaqtincha yopiq.</div>':shopSheet()+pks().map((p,i)=>{const base=p[2]*4,pr=pPrice(p);return `<a class="pk" href="#" onclick="openShop(${i});return false"><span class="ic">${p[0]}</span><span class="pi"><b>${esc(p[1])}</b><br>🪙 ${fmt(p[2])}</span><span class="pp"><i>-${p[3]}%</i><s>${fmt(base)}</s><br><b>${fmt(pr)} so‘m</b></span></a>`}).join(''))+myOrders();
  }else if(tab==='mis'){
   const m=curM(),ln=LNK('r-'+bcode(uid));
-  h=farm()+`<div class="card"><h3>👥 Do‘stlarni chaqirish</h3><small>3 ta do‘stingiz havolangiz orqali qo‘shilsa 🪙 ${fmt(mrw('invite'))} olasiz. Bugun: ${inv()}/3</small><div class="row"><a class="tgb" href="https://t.me/share/url?url=${encodeURIComponent(ln)}&text=${encodeURIComponent('Sirli City o‘yiniga qo‘shiling! 🏙️')}" target="_blank" onclick="shareMark()">✈️ Telegramda yuborish</a><button class="g" onclick="copyInv()">🔗 Nusxalash</button></div></div><div class="card"><h3>📲 Telegram storisiga joylang</h3><small>O‘yin havolasini Telegram storisiga joylang va 🪙 ${fmt(STORYC)} oling (har kuni bir marta)</small><div class="row"><button onclick="shareStory()">📲 Storisga joylash</button><button class="g" ${styDone()?'disabled':''} onclick="claimStory()">${styDone()?'Bugun olingan ✓':'🪙 '+fmt(STORYC)+' olish'}</button></div></div><div class="card"><h3>Kundalik missiyalar</h3><small>Har kuni yangilanadi · jami 🪙 ${fmt(MIS.reduce((a,x)=>a+mrw(x[0]),0))}</small>`+MIS.map(([id,t,n])=>{const v=Math.min(id==='invite'?inv():(m.p[id]||0),n),ok=v>=n,cl=m.c[id];
+  h=farm()+`<div class="card"><h3>👥 Do‘stlarni chaqirish</h3><small>3 ta do‘stingiz havolangiz orqali qo‘shilsa 🪙 ${fmt(mrw('invite'))} olasiz. Bugun: ${inv()}/3</small><div class="row"><a class="tgb" href="https://t.me/share/url?url=${encodeURIComponent(ln)}&text=${encodeURIComponent('Sirli City o‘yiniga qo‘shiling! 🏙️')}" target="_blank" onclick="shareMark()">✈️ Telegramda yuborish</a><button class="g" onclick="copyInv()">🔗 Nusxalash</button></div></div><div class="card"><h3>📲 Telegram storisiga joylang</h3><small>O‘yin havolasini Telegram storisiga joylang va 🪙 ${fmt(STORYC)} oling (har kuni bir marta)</small><div class="row"><button onclick="shareStory()">📲 Storisga joylash</button><button class="g" ${styDone()?'disabled':''} onclick="claimStory()">${styDone()?'Bugun olingan ✓':'🪙 '+fmt(STORYC)+' olish'}</button></div></div><div class="card"><h3>Kundalik missiyalar</h3><small>Har 12 soatda yangilanadi (keyingi: ${new Date(mnext()).toLocaleTimeString('uz',{hour:'2-digit',minute:'2-digit'})}) · jami 🪙 ${fmt(MIS.reduce((a,x)=>a+mrw(x[0]),0))}</small>`+MIS.map(([id,t,n])=>{const v=Math.min(id==='invite'?inv():(m.p[id]||0),n),ok=v>=n,cl=m.c[id];
    return `<div style="margin-top:12px"><div class="row"><span>${t}</span><b>🪙 ${fmt(mrw(id))}</b></div><div class="bar"><div style="width:${v/n*100}%"></div></div><div class="row"><small>${v}/${n}</small><button ${ok&&!cl?'':'disabled'} onclick="claim('${id}')">${cl?'Olingan ✓':'Olish'}</button></div></div>`}).join('')+`</div>`;
  }else if(tab==='lv'){h=lvView();
  }else if(tab==='inbox'){h=ibView();if(ib.some(x=>!x.read))setTimeout(readAll,700);
