@@ -85,10 +85,10 @@ const bcode=id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return h
 function copyLink(id){const u=LNK('b-'+bcode(id));try{navigator.clipboard.writeText(u).then(()=>toast('Havola nusxalandi')).catch(()=>prompt('Havola:',u))}catch(e){prompt('Havola:',u)}}
 const MIS=[['login','O‘yinga kirish',1,150],['tap','30 mijozga xizmat ko‘rsat',30,600],['floor','Qavat sotib ol',1,400],['chat','Chatga yozish',1,100],['help','3 ta binoga 40 coin ber',3,400],['col','Sandiqdan 3 marta coin ol',3,300],['chest','2 soatlik sovg‘a sandig‘ini och',1,400],['like','3 ta binoga layk bos',3,300],['visit','3 ta boshqa binoni ko‘r',3,250],['share','Do‘stlarga havola yubor',1,300],['invite','3 ta do‘st chaqir',3,5000]];
 const mrw=id=>cfg.mr&&cfg.mr[id]!=null?cfg.mr[id]:(MIS.find(x=>x[0]===id)||[0,0,0,0])[3];
-const TABS=[['city','🏙️','Harita'],['mine','🏢','Binolarim'],['coin','🛍️','Do‘kon'],['mis','🎯','Missiya'],['top','🏆','Reyting'],['trade','🤝','Savdo'],['lv','📈','Daraja']];
+const TABS=[['city','🏙️','Harita'],['svc','🙋','Xizmat'],['mine','🏢','Binolarim'],['coin','🛍️','Do‘kon'],['mis','🎯','Missiya'],['top','🏆','Reyting'],['trade','🤝','Savdo'],['lv','📈','Daraja']];
 const $=s=>document.querySelector(s),col=n=>db.collection(n);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const today=()=>new Date().toISOString().slice(0,10),fmt=n=>(+n).toLocaleString('ru');
+const dkey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},today=()=>dkey(Date.now()),fmt=n=>(+n).toLocaleString('ru');
 const price=(f,g)=>Math.round(cfg.fb*Math.pow(cfg.fm,f)*(g?2:1));
 const tgl=t=>t?`<a href="https://t.me/${esc(String(t).replace('@',''))}" target="_blank">@${esc(String(t).replace('@',''))}</a>`:'<small>nik yo‘q</small>';
 const oname=b=>(players[b.owner]||{}).name||'?';
@@ -113,12 +113,13 @@ function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(isAdmin&&!me.ci&&bs[uid]){p.ci=1;col('b').doc(uid).update({ctr:true,sale:'200 000 so‘m'}).catch(()=>{})}
  if(Object.keys(p).length)col('players').doc(uid).update(p)}
 function buyF(id){const b=bs[id],c=price(b.floors,b.gold);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+1});upd({coins:me.coins-c,m:prog('floor')});toast('Yangi qavat! 🎉')}
-const SG=5000,CAP=200,CG=1e4,CCAP=10;
+const SG=5000,CAP=200,CG=1e4,CCAP=30,CRATE=[10,5,3];
+const srN=()=>me&&me.sr&&me.sr.d===today()?me.sr.n:0;
 const stored=()=>me&&me.st?Math.min(CAP,Math.floor((Date.now()-me.st)/SG)):0;
-const waiting=()=>me&&me.ct?Math.min(CCAP,Math.floor((Date.now()-me.ct)/CG)):0;
+const waiting=()=>me&&me.ct&&srN()<CRATE.length?Math.min(CCAP,Math.floor((Date.now()-me.ct)/CG)):0;
 function collect(){const n=stored();if(!n)return toast('Sandiq bo‘sh');upd({coins:me.coins+n,st:Date.now(),m:prog('col')});toast('+'+n+' coin')}
-function serve(){const w=waiting();if(!w)return toast('Mijoz hali kelmadi');upd({coins:me.coins+5,ct:w>=CCAP?Date.now()-(CCAP-1)*CG:me.ct+CG,m:prog('tap')});toast('+5 coin')}
-const farm=()=>`<div class="card"><div class="row"><b>🧰 Sandiq <span id="stv"></span></b><button id="stbtn" class="y" onclick="collect()">Olish</button></div><div class="bar"><div id="stb" style="width:0"></div></div><small>Har 5 soniyada 1 coin yig‘iladi (sig‘im 200)</small></div><div class="card"><div class="row"><b>🙋 Mijozlar: <span id="cw"></span></b><button id="cbtn" onclick="serve()">Xizmat ko‘rsatish +5</button></div><small>Har 10 soniyada yangi mijoz keladi. Bugun: <span id="cs">0</span>/30</small></div>`;
+function serve(){const n=srN();if(n>=CRATE.length)return toast('Bugungi 3 martalik xizmat tugadi, ertaga davom etadi');const w=waiting();if(w<CCAP)return toast('Avval '+CCAP+' mijoz to‘lsin ('+w+'/'+CCAP+')');const r=CRATE[n],a=CCAP*r;upd({coins:me.coins+a,ct:Date.now(),sr:{d:today(),n:n+1},m:prog('tap',CCAP)});toast('+'+a+' coin 🎉 ('+CCAP+' × '+r+')')}
+const farm=()=>`<div class="card"><div class="row"><b>🧰 Sandiq <span id="stv"></span></b><button id="stbtn" class="y" onclick="collect()">Olish</button></div><div class="bar"><div id="stb" style="width:0"></div></div><small>Har 5 soniyada 1 coin yig‘iladi (sig‘im 200)</small></div><div class="card"><div class="row"><b>🙋 Mijozlar: <span id="cw"></span>/${CCAP}</b><button id="cbtn" onclick="serve()">Olish</button></div><div class="bar"><div id="cwb" style="width:0"></div></div><small id="cinfo"></small></div>`;
 function claim(id){const m=curM(),r=mrw(id);if(m.c[id])return;if(id==='invite'&&inv()<3)return;m.c[id]=1;upd({coins:me.coins+r,xp:(me.xp||0)+Math.round(r/10),m});toast('+'+r+' coin')}
 function send(){const i=$('#ci'),t=i.value.trim();if(!t||me.blocked)return;i.value='';col('chat').add({uid,name:me.name,text:t.slice(0,200),ts:Date.now()});upd({m:prog('chat')})}
 const tgOk=t=>/^[A-Za-z0-9_]{4,32}$/.test(t)&&!Object.entries(players).some(([i,p])=>i!==uid&&String(p.tg||'').toLowerCase()===t.toLowerCase());
@@ -133,7 +134,7 @@ function toggleLike(id){const b=bs[id];if(!b||b.owner===uid)return toast('O‘z 
  d.set({b:id,uid,ts:Date.now()});notify(b.owner,'like',me.name+' binoingizga layk bosdi ❤️');const m=curM();m.lk=m.lk||[];if(!m.lk.includes(id)){m.lk.push(id);m.p.like=(m.p.like||0)+1;upd({m})}}
 function buyBtn(id){const b=bs[id];if(!b||b.owner===uid)return;if(b.sale)reqBuy(id);notify(b.owner,'buy',me.name+(b.sale?' binoingizni sotib olish so‘rovini yubordi ('+b.sale+')':' binoingizni sotib olmoqchi'));toast('So‘rov egasiga yuborildi')}
 function visitB(id){const b=bs[id];if(!me||!b||b.owner===uid)return;const m=curM();m.v=m.v||[];if(m.v.includes(id))return;m.v.push(id);m.p.visit=(m.p.visit||0)+1;upd({m})}
-const inv=()=>Object.values(players).filter(p=>p.ref===uid&&p.ts&&new Date(p.ts).toISOString().slice(0,10)===today()).length;
+const inv=()=>Object.values(players).filter(p=>p.ref===uid&&p.ts&&dkey(p.ts)===today()).length;
 const refId=()=>refCode&&Object.keys(players).find(i=>bcode(i)===refCode&&i!==uid);
 const shareMark=()=>{if(!(curM().p.share))upd({m:prog('share')})};
 const copyInv=()=>{cp(LNK('r-'+bcode(uid)));shareMark()};
@@ -213,18 +214,18 @@ const CH=72e5;const chestLeft=()=>me?Math.max(0,(me.ch||0)+CH-Date.now()):0;
 function openChest(){if(!me||chestLeft())return toast('Sandiq hali yopiq');const a=200+Math.floor(Math.random()*21)*10;upd({coins:me.coins+a,ch:Date.now(),m:prog('chest')});toast('🎁 Sandiqdan +'+a+' coin!')}
 function tickC(){const e=$('#chest'),o=$('#on');if(o)o.textContent='🟢 '+Math.max(1,Object.values(players).filter(p=>(p.seen||0)>Date.now()-90000).length)+' onlayn';const LV=$('#live');if(LV){const rl=Object.values(players).filter(p=>p.ts).sort((a,b)=>b.ts-a.ts).slice(0,5);if(rl.length){const p=rl[Math.floor(Date.now()/4000)%rl.length];LV.style.display='flex';if(LV.dataset.k!==p.id){LV.dataset.k=p.id;LV.innerHTML='<span class="jn">JONLI</span>🏠 <b>'+esc(p.name)+'</b>'+(p.tg?' (@'+esc(p.tg)+')':'')+' shaharga qo‘shildi, uyi qurildi'}}}if(!me)return;
  if(e){const l=chestLeft();e.textContent=l?'🎁 '+[l/36e5|0,(l/6e4|0)%60,(l/1e3|0)%60].map(n=>String(n).padStart(2,'0')).join(':'):'🎁 Ochish!';e.style.opacity=l?.7:1}
- const a=stored(),w=waiting(),S=(k,v)=>{const x=$('#'+k);if(x)x.textContent=v};S('stv',a+'/'+CAP);S('cw',w);S('cs',Math.min(30,curM().p.tap||0));
- const b=$('#stb');if(b)b.style.width=a/CAP*100+'%';const sb=$('#stbtn');if(sb)sb.disabled=!a;const cb=$('#cbtn');if(cb)cb.disabled=!w}
+ const a=stored(),w=waiting(),S=(k,v)=>{const x=$('#'+k);if(x)x.textContent=v};S('stv',a+'/'+CAP);S('cw',w);{const n=srN(),ci=$('#cinfo'),cw=$('#cwb');if(cw)cw.style.width=w/CCAP*100+'%';if(ci)ci.textContent=n>=CRATE.length?'Bugun 3 marta xizmat qildingiz. Ertaga yana boshlanadi.':'Har 10 soniyada 1 mijoz keladi. '+CCAP+' ta to‘lgach «Olish» ni bosing: '+(n+1)+'-marta, har mijozga '+CRATE[n]+' coin (jami '+CCAP*CRATE[n]+'). Bugun: '+n+'/'+CRATE.length}
+ const b=$('#stb');if(b)b.style.width=a/CAP*100+'%';const sb=$('#stbtn');if(sb)sb.disabled=!a;const cb=$('#cbtn');if(cb)cb.disabled=w<CCAP}
 function go(t){if(fsOn&&t!=='city')fs();tab=t;sel=null;buyS=null;if(t==='city'&&!fsOn){tab='city';fs();return}render()}
 
 const G=12,PX=Math.PI/180,V={x:0,z:0,d:150,yaw:.6,pitch:52*PX,vx:0,vz:0},pts=new Map(),mc={};
-let rd,sc,cm,grp,need=1,sig='',pick=[],lw=0,lh=0,g0=null,moved=0,t0=0,posById={},hashDone=0;
+let MAPR=300,rd,sc,cm,grp,need=1,sig='',pick=[],lw=0,lh=0,g0=null,moved=0,t0=0,posById={},hashDone=0;
 const cv=(w,h,f)=>{const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'),w,h);return c};
 const rep=t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t};
 function c3(c){if(String(c)[0]==='#')return new THREE.Color(c);const m=String(c).match(/[\d.]+/g)||[200,60,55];return new THREE.Color().setHSL(m[0]/360,m[1]/100,m[2]/100)}
 function init3(){const el=$('#map'),T=THREE;
  rd=new T.WebGLRenderer({antialias:true,alpha:true});rd.setPixelRatio(Math.min(devicePixelRatio,2));el.prepend(rd.domElement);
- sc=new T.Scene();sc.fog=new T.Fog(0xf3dccb,380,1900);cm=new T.PerspectiveCamera(50,1,1,6000);
+ sc=new T.Scene();sc.fog=new T.Fog(0xf3dccb,700,2800);cm=new T.PerspectiveCamera(50,1,1,6000);
  sc.add(new T.HemisphereLight(0xffffff,0x9fb48a,.9));const dl=new T.DirectionalLight(0xfff1dc,.85);dl.position.set(80,140,60);sc.add(dl);
  grp=new T.Group();sc.add(grp);new ResizeObserver(rs).observe(el);cam();
  const ct=new T.CanvasTexture(cv(128,64,(g,w,h)=>{const r=g.createRadialGradient(w/2,h/2,2,w/2,h/2,w/2);r.addColorStop(0,'rgba(255,255,255,.95)');r.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=r;g.fillRect(0,0,w,h)})),cl=[];
@@ -241,8 +242,9 @@ function init3(){const el=$('#map'),T=THREE;
 function pair(){if(pts.size<2)return null;const[a,b]=[...pts.values()];return{d:Math.hypot(a[0]-b[0],a[1]-b[1])||1,a:Math.atan2(b[1]-a[1],b[0]-a[0]),y:(a[1]+b[1])/2}}
 function applyHash(r){const m=location.hash.match(/^#b-([a-z0-9]+)$/);if(!m||!sc)return;const id=Object.keys(bs).find(i=>bcode(i)===m[1]);if(!id||!posById[id])return;tab='city';sel=id;V.x=posById[id][0];V.z=posById[id][1];V.d=60;cam();if(r)render()}
 addEventListener('hashchange',()=>applyHash(1));
+function goB(id){if(!sc||!posById[id])return toast('Bino xaritada topilmadi');sel=id;V.x=posById[id][0];V.z=posById[id][1];V.d=60;cam();tab='city';if(!fsOn)fs();else render()}
 function rs(){const el=$('#map'),w=el.clientWidth,h=el.clientHeight;if(!w||!h||(w===lw&&h===lh))return;lw=w;lh=h;rd.setSize(w,h);cm.aspect=w/h;cm.updateProjectionMatrix();need=1}
-function cam(){const{x,z,d,yaw,pitch}=V;cm.position.set(x+d*Math.sin(yaw)*Math.cos(pitch),d*Math.sin(pitch),z+d*Math.cos(yaw)*Math.cos(pitch));cm.lookAt(x,0,z);need=1}
+function cam(){V.d=Math.min(600,Math.max(14,V.d));V.pitch=Math.min(1.45,Math.max(.5,V.pitch));{const R=MAPR-25;V.x=Math.max(-R,Math.min(R,V.x));V.z=Math.max(-R,Math.min(R,V.z))}const{x,z,d,yaw,pitch}=V;cm.position.set(x+d*Math.sin(yaw)*Math.cos(pitch),d*Math.sin(pitch),z+d*Math.cos(yaw)*Math.cos(pitch));cm.lookAt(x,0,z);need=1}
 const rot=d=>{V.yaw+=d*PX;cam()},zoom=f=>{V.d=Math.min(1000,Math.max(14,V.d/Math.pow(f,.7)));cam()},home=()=>{V.x=V.z=0;V.d=150;V.pitch=52*PX;cam()},tilt=d=>{V.pitch=Math.min(86,Math.max(4,V.pitch/PX+d*.6))*PX;cam()};
 const rc=new THREE.Raycaster(),mv=new THREE.Vector2();
 function tapAt(x,y){if(!fsOn)fs();const r=rd.domElement.getBoundingClientRect();mv.set((x-r.left)/r.width*2-1,-((y-r.top)/r.height)*2+1);rc.setFromCamera(mv,cm);
@@ -267,7 +269,7 @@ function build(){const T=THREE,A=e=>(e[1].ctr||(players[e[1].owner]||{}).adm)?1:
  const es=Object.entries(bs).sort((a,b)=>A(b)-A(a)||(a[1].ts||0)-(b[1].ts||0)||(a[0]<b[0]?-1:1));
  const sg=JSON.stringify([cfg.tg,es.map(([i,b])=>[i,b.floors,b.gold,b.color,b.type,b.label,b.sale,b.ctr,(players[b.owner]||{}).name,(players[b.owner]||{}).adm,(players[b.owner]||{}).lv])]);if(sg===sig)return;sig=sg;
  while(grp.children.length){const c=grp.children[0];grp.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.isSprite){o.material.map.dispose();o.material.dispose()}})}
- pick=[];posById={};const N=es.length,H=Math.max(21,Math.ceil(Math.sqrt(N)/2)+10),S=(2*H+1)*G;let cells=[];
+ pick=[];posById={};const N=es.length,H=Math.max(21,Math.ceil(Math.sqrt(N)/2)+10),S=(2*H+1)*G;MAPR=S/2;let cells=[];
  for(let i=-H;i<=H;i++)for(let j=-H;j<=H;j++)cells.push([i,j]);
  cells=cells.filter(c=>Math.max(Math.abs(c[0]),Math.abs(c[1]))>2||(c[0]===0&&c[1]===0));
  cells.sort((a,b)=>Math.hypot(a[0],a[1])-Math.hypot(b[0],b[1])||Math.atan2(a[1],a[0])-Math.atan2(b[1],b[0]));
@@ -318,6 +320,7 @@ function render(){
   const m=curM(),ln=LNK('r-'+bcode(uid));
   h=`<div class="card"><h3>👥 Do‘stlarni chaqirish</h3><small>3 ta do‘stingiz havolangiz orqali qo‘shilsa 🪙 ${fmt(mrw('invite'))} olasiz. Bugun: ${inv()}/3</small><div class="row"><a class="tgb" href="https://t.me/share/url?url=${encodeURIComponent(ln)}&text=${encodeURIComponent('Sirli City o‘yiniga qo‘shiling! 🏙️')}" target="_blank" onclick="shareMark()">✈️ Telegramda yuborish</a><button class="g" onclick="copyInv()">🔗 Nusxalash</button></div></div><div class="card"><h3>Kundalik missiyalar</h3><small>Har kuni yangilanadi · jami 🪙 ${fmt(MIS.reduce((a,x)=>a+mrw(x[0]),0))}</small>`+MIS.map(([id,t,n])=>{const v=Math.min(id==='invite'?inv():(m.p[id]||0),n),ok=v>=n,cl=m.c[id];
    return `<div style="margin-top:12px"><div class="row"><span>${t}</span><b>🪙 ${fmt(mrw(id))}</b></div><div class="bar"><div style="width:${v/n*100}%"></div></div><div class="row"><small>${v}/${n}</small><button ${ok&&!cl?'':'disabled'} onclick="claim('${id}')">${cl?'Olingan ✓':'Olish'}</button></div></div>`}).join('')+`</div>`;
+ }else if(tab==='svc'){h=farm();
  }else if(tab==='lv'){h=lvView();
  }else if(tab==='inbox'){h=ibView();
  }else if(tab==='top'){
@@ -327,7 +330,7 @@ function render(){
  }else if(tab==='trade'){
   const inc=reqs.filter(r=>r.to===uid&&bs[r.b]&&bs[r.b].owner===uid),sale=es.filter(([i,b])=>b.sale&&b.owner!==uid);
   h=`<div class="card"><h3>Menga kelgan so‘rovlar</h3>`+(inc.map(r=>`<div class="row"><span>${esc(r.fromName)} ${tgl(r.fromTg)}<br><small>${esc(bname(bs[r.b]))} · ${esc(r.price)}${r.paid?' · ✅ to‘lov qildi':''}</small></span><button class="r" onclick="give('${r.id}')">BINONI O‘TKAZISH</button></div>`).join('')||'<small>So‘rov yo‘q</small>')+`</div>
-  <div class="card"><h3>Sotuvdagi binolar</h3><small>Egasiga Telegramda yozib narxni kelishing, keyin so‘rov yuboring.</small>`+(sale.map(([id,b])=>`<div class="row"><span>${esc(bname(b))} · ${b.floors} qavat<br><small>${esc(b.sale)} · ${tgl((players[b.owner]||{}).tg)}</small></span><button onclick="openBuy('${id}')">Sotib olish</button></div>`).join('')||'<br><small>Hozircha sotuvda bino yo‘q</small>')+`</div>`;
+  <div class="card"><h3>Sotuvdagi binolar</h3><small>Egasiga Telegramda yozib narxni kelishing, keyin so‘rov yuboring.</small>`+(sale.map(([id,b])=>`<div class="row"><span>${esc(bname(b))} · <a href="#" onclick="goB('${id}');return false" style="font-weight:700">${b.floors} qavat 📍</a><br><small>${esc(b.sale)} · ${tgl((players[b.owner]||{}).tg)}</small></span><button onclick="openBuy('${id}')">Sotib olish</button></div>`).join('')||'<br><small>Hozircha sotuvda bino yo‘q</small>')+`</div>`;
  }else if(tab==='admin'&&isAdmin){h=adminView();
  }
  app.innerHTML=h;tickC();
