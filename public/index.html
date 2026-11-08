@@ -130,11 +130,13 @@ const GIFT=40;
 function notify(to,type,text,coins){col('inbox').add({to,from:uid,fromName:me.name,fromTg:me.tg||'',type,text,coins:coins||0,ts:Date.now(),read:false}).catch(()=>{})}
 function help(o){const h=me.hc&&me.hc.day===today()?me.hc.n:0;if(h>=cfg.hl)return toast('Bugungi limit tugadi');if(me.coins<GIFT)return toast('Coin yetarli emas');const t=players[o];if(!t||o===uid)return;
  col('players').doc(o).update({coins:t.coins+GIFT});notify(o,'coin',me.name+' sizga '+GIFT+' coin berdi',GIFT);upd({coins:me.coins-GIFT,hc:{day:today(),n:h+1},m:prog('help')});toast(GIFT+' coin yuborildi')}
-const lc=id=>lk.filter(x=>x.b===id).length,iL=id=>lk.some(x=>x.id===id+'_'+uid);
+const lc=id=>lk.filter(x=>x.b===id).length,iL=id=>lk.some(x=>x.id===id+'_'+uid),vc=id=>lk.filter(x=>x.vb===id).length;
+const rankOf=id=>{const l=Object.entries(bs).sort((a,b)=>(b[1].floors||0)-(a[1].floors||0)||(a[1].ts||0)-(b[1].ts||0));const i=l.findIndex(x=>x[0]===id);return i<0?0:i+1};
+const statsBox=id=>{const b=bs[id];if(!b)return'';const c=(t,l)=>`<div style="flex:1;text-align:center;padding:8px 2px;border-radius:12px;background:var(--bg)"><div style="font-size:20px;font-weight:800">${t}</div><small>${l}</small></div>`;return `<div style="display:flex;gap:6px;margin:8px 0">${c(b.floors,'qavat')}${c(lc(id),'layk')}${c(vc(id),'kirish')}${c('#'+rankOf(id),'balandlik')}</div>`};
 function toggleLike(id){const b=bs[id];if(!b||b.owner===uid)return toast('O‘z binongizga layk bosib bo‘lmaydi');const d=col('likes').doc(id+'_'+uid);if(iL(id))return d.delete();
  d.set({b:id,uid,ts:Date.now()});notify(b.owner,'like',me.name+' binoingizga layk bosdi ❤️');const m=curM();m.lk=m.lk||[];if(!m.lk.includes(id)){m.lk.push(id);m.p.like=(m.p.like||0)+1;upd({m})}}
 function buyBtn(id){const b=bs[id];if(!b||b.owner===uid)return;if(b.sale)reqBuy(id);notify(b.owner,'buy',me.name+(b.sale?' binoingizni sotib olish so‘rovini yubordi ('+b.sale+')':' binoingizni sotib olmoqchi'));toast('So‘rov egasiga yuborildi')}
-function visitB(id){const b=bs[id];if(!me||!b||b.owner===uid)return;const m=curM();m.v=m.v||[];if(m.v.includes(id))return;m.v.push(id);m.p.visit=(m.p.visit||0)+1;upd({m})}
+function visitB(id){const b=bs[id];if(!me||!b||b.owner===uid)return;{const vid='v_'+id+'_'+uid+'_'+today();if(!lk.some(x=>x.id===vid))col('likes').doc(vid).set({vb:id,uid,ts:Date.now()}).catch(()=>{})}const m=curM();m.v=m.v||[];if(m.v.includes(id))return;m.v.push(id);m.p.visit=(m.p.visit||0)+1;upd({m})}
 const inv=()=>Object.values(players).filter(p=>p.ref===uid&&p.ts&&dkey(p.ts)===today()).length;
 const refId=()=>refCode&&Object.keys(players).find(i=>bcode(i)===refCode&&i!==uid);
 const shareMark=()=>{if(!(curM().p.share))upd({m:prog('share')})};
@@ -147,8 +149,9 @@ function lvView(){const c=curLv(),l=Math.min(me.lc||1,NL),xp=me.xp||0,nx=c<NL?lv
 function readAll(){ib.filter(x=>!x.read).forEach(x=>col('inbox').doc(x.id).update({read:true}))}
 function ibView(){const I={like:'❤️',coin:'🪙',buy:'🛒'};return `<div class="card"><h3>📨 Xabarlar</h3><button class="g" onclick="readAll()">Hammasini o‘qilgan deb belgilash</button>`+(ib.map(x=>`<div class="msg" style="${x.read?'opacity:.6':''}">${I[x.type]||'💬'} <b>${esc(x.fromName)}</b> ${tgl(x.fromTg)}<br>${esc(x.text)}<br><small>${T0(x.ts)}</small></div>`).join('')||'<br><small>Xabar yo‘q</small>')+`</div>`}
 function bcard(id){const b=bs[id],o=players[b.owner]||{},hc=me.hc&&me.hc.day===today()?me.hc.n:0;
- return `<div class="card" style="margin-top:8px"><h3>${esc(b.label||bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗</button></h3>Qavatlar: <b>${b.floors}</b> · ❤️ ${lc(id)}<br>Egasi: <b>${esc(o.name)}</b> ${tgl(o.tg)}${b.sale?`<br><span class="tag">Sotuvda: ${esc(b.sale)}</span>`:''}`+(b.owner===uid?'<br><small>Bu sizning binoingiz</small>':`<div class="row"><button class="${iL(id)?'r':'g'}" style="flex:1" onclick="toggleLike('${id}')">❤️ Layk${iL(id)?' ✓':''}</button><button class="y" style="flex:1" onclick="help('${b.owner}')">🪙 ${GIFT} coin (${hc}/${cfg.hl})</button></div><div class="row">${b.sale?`<button class="big" onclick="buyS='${id}';render()">🛒 Sotib olish — ${esc(b.sale)}</button>`:`<button class="big g" onclick="buyBtn('${id}')">🛒 Sotib olmoqchiman (so‘rash)</button>`}</div>`)+`</div>`+(buyS===id&&b.sale&&b.owner!==uid?buySheet(id):'')}
+ return `<div class="card" style="margin-top:8px"><h3>${esc(b.label||bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗</button></h3>${statsBox(id)}Egasi: <b>${esc(o.name)}</b> ${tgl(o.tg)}${b.sale?`<br><span class="tag">Sotuvda: ${esc(b.sale)}</span>`:''}`+(b.owner===uid?'<br><small>Bu sizning binoingiz</small>':`<div class="row"><button class="${iL(id)?'r':'g'}" style="flex:1" onclick="toggleLike('${id}')">❤️ Layk${iL(id)?' ✓':''}</button><button class="y" style="flex:1" onclick="help('${b.owner}')">🪙 ${GIFT} coin (${hc}/${cfg.hl})</button></div><div class="row">${b.sale?`<button class="big" onclick="buyS='${id}';render()">🛒 Sotib olish — ${esc(b.sale)}</button>`:`<button class="big g" onclick="buyBtn('${id}')">🛒 Sotib olmoqchiman (so‘rash)</button>`}</div>`)+`</div>`+(buyS===id&&b.sale&&b.owner!==uid?buySheet(id):'')}
 const COLORS=['#42a5f5','#26c6da','#66bb6a','#ffa726','#ef5350','#ab47bc','#ec407a','#8d6e63','#78909c','#fdd835'],TYPES=[['glass','Shisha'],['tower','Minora'],['wide','Keng'],['step','Zinapoya']];
+function setSt(id,k){const b=bs[id];if(!b)return;if(b.gold&&!confirm('Oltin uslubdan chiqsangiz, qayta olish uchun coin to‘lanadi. Davom etasizmi?'))return;updB(id,{st:k,gold:false});toast('Uslub o‘zgardi ✅')}
 function setLabel(id){updB(id,{label:$('#lb_'+id).value.trim().replace(/\s+/g,' ').slice(0,20)});toast('Bino nomi saqlandi ✅')}
 function fs(){fsOn=!fsOn;$('#map').classList.toggle('fs',fsOn);document.body.style.overflow=fsOn?'hidden':'';setTimeout(()=>{rs();need=1;render()},60)}
 function sell(id){const v=$('#sp_'+id).value.trim(),k=$('#sk_'+id).value.replace(/\s/g,'');if(!v)return toast('Narxni yozing');if(k&&!/^\d{16}$/.test(k))return toast('Karta raqami 16 ta raqam bo‘lishi kerak');updB(id,{sale:v,card:k?k.replace(/(\d{4})(?=\d)/g,'$1 '):''});toast('Sotuvga qo‘yildi')}
@@ -232,7 +235,7 @@ function tickC(){const e=$('#chest'),o=$('#on');if(o)o.textContent='🟢 '+Math.
  const b=$('#stb');if(b)b.style.width=a/CAP*100+'%';const sb=$('#stbtn');if(sb)sb.disabled=!a;const cb=$('#cbtn');if(cb)cb.disabled=w<CCAP;dots()}
 function go(t){if(fsOn&&t!=='city')fs();tab=t;sel=null;buyS=null;if(t==='city'&&!fsOn){tab='city';fs();return}render()}
 
-const G=12,PX=Math.PI/180,V={x:0,z:0,d:150,yaw:.6,pitch:52*PX,vx:0,vz:0},pts=new Map(),mc={};
+const G=12,PX=Math.PI/180,V={x:0,z:0,d:150,yaw:.6,pitch:42*PX,vx:0,vz:0},pts=new Map(),mc={};
 let marks=[],MAPR=300,rd,sc,cm,grp,need=1,sig='',pick=[],lw=0,lh=0,g0=null,moved=0,t0=0,posById={},hashDone=0;
 const cv=(w,h,f)=>{const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'),w,h);return c};
 const rep=t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t};
@@ -259,30 +262,34 @@ addEventListener('hashchange',()=>applyHash(1));
 function goB(id){if(!sc||!posById[id])return toast('Bino xaritada topilmadi');sel=id;V.x=posById[id][0];V.z=posById[id][1];V.d=60;cam();tab='city';if(!fsOn)fs();else render()}
 function rs(){const el=$('#map'),w=el.clientWidth,h=el.clientHeight;if(!w||!h||(w===lw&&h===lh))return;lw=w;lh=h;rd.setSize(w,h);cm.aspect=w/h;cm.updateProjectionMatrix();need=1}
 function cam(){V.d=Math.min(600,Math.max(14,V.d));V.pitch=Math.min(1.45,Math.max(.5,V.pitch));{const R=MAPR-25;V.x=Math.max(-R,Math.min(R,V.x));V.z=Math.max(-R,Math.min(R,V.z))}const{x,z,d,yaw,pitch}=V;cm.position.set(x+d*Math.sin(yaw)*Math.cos(pitch),d*Math.sin(pitch),z+d*Math.cos(yaw)*Math.cos(pitch));cm.lookAt(x,0,z);need=1}
-const rot=d=>{V.yaw+=d*PX;cam()},zoom=f=>{V.d=Math.min(1000,Math.max(14,V.d/Math.pow(f,.7)));cam()},home=()=>{V.x=V.z=0;V.d=150;V.pitch=52*PX;cam()},tilt=d=>{V.pitch=Math.min(86,Math.max(4,V.pitch/PX+d*.6))*PX;cam()};
+const rot=d=>{V.yaw+=d*PX;cam()},zoom=f=>{V.d=Math.min(1000,Math.max(14,V.d/Math.pow(f,.7)));cam()},home=()=>{V.x=V.z=0;V.d=150;V.pitch=42*PX;cam()},tilt=d=>{V.pitch=Math.min(86,Math.max(4,V.pitch/PX+d*.6))*PX;cam()};
 const rc=new THREE.Raycaster(),mv=new THREE.Vector2();
 function tapAt(x,y){if(!fsOn)fs();const r=rd.domElement.getBoundingClientRect();mv.set((x-r.left)/r.width*2-1,-((y-r.top)/r.height)*2+1);rc.setFromCamera(mv,cm);
  const h=rc.intersectObjects(pick,false)[0];if(!h)return;const u=h.object.userData;
  if(u.link){const a=document.createElement('a');a.href=u.link;a.target='_blank';a.click();return}sel=u.id;visitB(u.id);render()}
 const winTex=rep(new THREE.CanvasTexture(cv(64,64,(g,w,h)=>{g.fillStyle='#eef6ff';g.fillRect(0,0,w,h);for(let i=0;i<2;i++){const x=4+i*32,gr=g.createLinearGradient(x,6,x+26,h-6);gr.addColorStop(0,'#86bff0');gr.addColorStop(.5,'#2f5f93');gr.addColorStop(1,'#5b95cf');g.fillStyle=gr;g.fillRect(x,6,26,h-14)}})));
 const gTex=rep(new THREE.CanvasTexture(cv(128,128,(g,w,h)=>{g.fillStyle='#656f82';g.fillRect(0,0,w,h);g.fillStyle='#e4dfd2';g.fillRect(19,19,90,90);g.fillStyle='#bcd9a6';g.fillRect(25,25,78,78);g.fillStyle='#fff';for(let k=0;k<128;k+=24){g.fillRect(0,k,2,10);g.fillRect(k,0,10,2)}})));
-function mat(c,g){const k=c+g;return mc[k]||(mc[k]=new THREE.MeshPhongMaterial({map:winTex,color:g?0xffc233:c3(c).lerp(new THREE.Color(0xffffff),.35),specular:g?0xfff0a0:0x99bbdd,shininess:g?130:90,emissive:g?0x3d2a00:0x0a1a2a}))}
+function mat(c,g,st){const k=c+'|'+g+'|'+(g?'':st||'');if(mc[k])return mc[k];let m;
+ if(!g&&st==='glass')m=new THREE.MeshPhongMaterial({map:winTex,color:c3(c).lerp(new THREE.Color(0xcfeeff),.6),specular:0xffffff,shininess:220,emissive:0x12324d,transparent:true,opacity:.86});
+ else if(!g&&st==='neon')m=new THREE.MeshPhongMaterial({map:winTex,color:0x1b1638,specular:0xffffff,shininess:60,emissive:c3(c).clone().multiplyScalar(.8),emissiveMap:winTex});
+ else m=new THREE.MeshPhongMaterial({map:winTex,color:g?0xffc233:c3(c).lerp(new THREE.Color(0xffffff),.35),specular:g?0xfff0a0:0x99bbdd,shininess:g?130:90,emissive:g?0x3d2a00:0x0a1a2a});
+ return mc[k]=m}
 function lab(t,big){const c=cv(256,64,(g,w,h)=>{g.fillStyle='rgba(16,42,67,.85)';g.beginPath();g.roundRect?g.roundRect(4,8,w-8,h-16,22):g.rect(4,8,w-8,h-16);g.fill();g.fillStyle='#fff';g.font=(t.length>24?'600 15px':t.length>15?'600 19px':'600 24px')+' sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(t,w/2,h/2+1)});
  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true,depthWrite:false}));s.scale.set(big?14:6,big?3.5:1.5,1);return s}
 function meTex(){return new THREE.CanvasTexture(cv(128,160,(g,w,h)=>{g.lineJoin='round';g.fillStyle='#ff3b30';g.strokeStyle='#fff';g.lineWidth=7;g.beginPath();g.moveTo(24,70);g.lineTo(104,70);g.lineTo(64,150);g.closePath();g.stroke();g.fill();g.beginPath();g.arc(64,50,44,0,7);g.stroke();g.fill();g.fillStyle='#fff';g.font='800 34px sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('SIZ',64,52)}))}
 function mk(id,b,x,z){const T=THREE,o=players[b.owner]||{},a=o.adm||b.ctr,g=a||b.gold,ty=a?'glass':(b.type||'glass'),w=a?8.6:ty==='tower'?5.4:ty==='wide'?9:6.8,h=((a?10:3.5)+b.floors*1.4)*(ty==='tower'?1.3:ty==='wide'?.75:1),gr=new T.Group();gr.position.set(x,0,z);posById[id]=[x,z];
  const geo=new T.BoxGeometry(w,h,w),uv=geo.attributes.uv,n=Math.max(1,Math.round(h/2.2));
  for(let i=0;i<uv.count;i++){const f=i>>2;if(f<2||f>3)uv.setXY(i,uv.getX(i)*2,uv.getY(i)*n)}
- const sm=mat(b.color,g),tp=new T.MeshPhongMaterial({color:g?0xffe08a:0xdfe8f2,shininess:60}),t=new T.Mesh(geo,[sm,sm,tp,tp,sm,sm]);t.position.y=1.2+h/2;t.userData.id=id;
+ const sm=mat(b.color,g,b.st),tp=new T.MeshPhongMaterial({color:g?0xffe08a:0xdfe8f2,shininess:60}),t=new T.Mesh(geo,[sm,sm,tp,tp,sm,sm]);t.position.y=1.2+h/2;t.userData.id=id;
  const pd=new T.Mesh(new T.BoxGeometry(w+1.6,1.2,w+1.6),new T.MeshPhongMaterial({color:g?0xe6b422:0xcfd8e3}));pd.position.y=.6;pd.userData.id=id;
- const rf=new T.Mesh(new T.BoxGeometry(w*.7,.7,w*.7),new T.MeshPhongMaterial({color:g?0xb8860b:0x56657a}));rf.position.y=1.2+h+.35;gr.add(pd,t,rf);pick.push(t,pd);
+ const rf=new T.Mesh(new T.BoxGeometry(w*.7,.7,w*.7),new T.MeshPhongMaterial({color:g?0xb8860b:0x56657a}));rf.position.y=1.2+h+.35;gr.add(pd,t,rf);pick.push(t,pd);if(!g&&b.st==='neon'){const ln=new T.LineSegments(new T.EdgesGeometry(geo),new T.LineBasicMaterial({color:c3(b.color)}));t.add(ln)}
  if(ty==='step'){const u=new T.Mesh(new T.BoxGeometry(w*.6,h*.35,w*.6),sm);u.position.y=1.2+h+.7+h*.175;gr.add(u)}
  if(ty==='tower'){const sp=new T.Mesh(new T.ConeGeometry(.8,5,8),new T.MeshPhongMaterial({color:g?0xffd54f:0x90a4ae}));sp.position.y=1.2+h+3;gr.add(sp)}
  if(a){const an=new T.Mesh(new T.CylinderGeometry(.25,.4,9,8),new T.MeshPhongMaterial({color:0xff4d6d}));an.position.y=1.2+h+5;gr.add(an)}
  const md=LVI[Math.min(NL,Math.max(1,o.lv||1))-1][1]+' ',nm=md+(a?'★ '+(o.adm?'Baxu':String(b.label||o.name||'?').slice(0,20)):String(b.label||o.name||'?').slice(0,20)),tl=o.adm?(cfg.tg||'Baxu_Uc'):o.tg;const lb=lab(nm+(b.sale?' · SOTUVDA':''),a);lb.position.y=1.2+h+(a?15:3.4);if(a&&tl&&!b.sale){lb.userData.link='https://t.me/'+tl;pick.push(lb)}gr.add(lb);if(b.owner===uid){const my=new T.Sprite(new T.SpriteMaterial({map:meTex(),transparent:true,depthWrite:false,depthTest:false}));my.scale.set(5.2,6.5,1);my.userData.by=1.2+h+(a?23:10);my.position.y=my.userData.by;my.renderOrder=10;gr.add(my);marks.push(my)}grp.add(gr)}
 function build(){const T=THREE,A=e=>(e[1].ctr||(players[e[1].owner]||{}).adm)?1:0;
  const es=Object.entries(bs).sort((a,b)=>A(b)-A(a)||(a[1].ts||0)-(b[1].ts||0)||(a[0]<b[0]?-1:1));
- const sg=JSON.stringify([cfg.tg,es.map(([i,b])=>[i,b.floors,b.gold,b.color,b.type,b.label,b.sale,b.ctr,(players[b.owner]||{}).name,(players[b.owner]||{}).adm,(players[b.owner]||{}).lv])]);if(sg===sig)return;sig=sg;
+ const sg=JSON.stringify([cfg.tg,es.map(([i,b])=>[i,b.floors,b.gold,b.color,b.type,b.st,b.label,b.sale,b.ctr,(players[b.owner]||{}).name,(players[b.owner]||{}).adm,(players[b.owner]||{}).lv])]);if(sg===sig)return;sig=sg;
  while(grp.children.length){const c=grp.children[0];grp.remove(c);c.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.isSprite){o.material.map.dispose();o.material.dispose()}})}
  pick=[];marks=[];posById={};const N=es.length,H=Math.max(21,Math.ceil(Math.sqrt(N)/2)+10),S=(2*H+1)*G;MAPR=S/2;let cells=[];
  for(let i=-H;i<=H;i++)for(let j=-H;j<=H;j++)cells.push([i,j]);
@@ -317,14 +324,15 @@ function render(){
  const ub=ib.filter(x=>!x.read).length;$('#tq').innerHTML=`<button class="${tab==='inbox'?'on':''}" onclick="go('inbox')">📨${ub?'<i>'+ub+'</i>':''}</button><button data-t="chat" class="${tab==='chat'?'on':''}" onclick="go('chat')">💬</button>`;
  $('#nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
  $('#bal').textContent='🪙 '+fmt(me.coins);{const fb=$('#fsb');if(fb)fb.textContent='🪙 '+fmt(me.coins)};tickC();
- const es=Object.entries(bs),tot={};es.forEach(([i,b])=>tot[b.owner]=(tot[b.owner]||0)+b.floors);
+ const es=Object.entries(bs),tot={},LK={},VS={};es.forEach(([i,b])=>{tot[b.owner]=(tot[b.owner]||0)+b.floors;LK[b.owner]=(LK[b.owner]||0)+lc(i);VS[b.owner]=(VS[b.owner]||0)+vc(i)});
  let h='';
  if(tab==='city'){
   h=`<small>1 barmoq — surish, 2 barmoq — kattalashtirish va aylantirish. Markazda ★ Baxu.</small>`;
   if(sel&&bs[sel])h+=bcard(sel);
  }else if(tab==='mine'){
   h=mine().map(([id,b])=>{const c=price(b.floors,b.gold);
-   return `<div class="card"><h3>${esc(bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗 Havola</button></h3><div class="row"><span>Qavatlar: <b>${b.floors}</b></span><span>Keyingi: <b>🪙 ${fmt(c)}</b></span></div><button class="big y" ${me.coins<c?'disabled':''} onclick="buyF('${id}')">Qavat sotib olish</button>${b.gold?'<div class="row"><span class="tag">🥇 Oltin bino</span></div>':`<div class="row"><button class="g" style="width:100%" onclick="goldUp('${id}')">🥇 Oltin qilish — 🪙 ${fmt(cfg.gp)}</button></div>`}
+   return `<div class="card"><h3>${esc(bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗 Havola</button></h3>${statsBox(id)}<div class="row"><span>Keyingi qavat: <b>🪙 ${fmt(c)}</b></span></div><button class="big y" ${me.coins<c?'disabled':''} onclick="buyF('${id}')">Qavat sotib olish</button>
+   <div style="margin-top:12px"><b>🎨 Bino uslubi</b></div><div style="display:flex;gap:6px;margin-top:6px">${[['classic','🧱','Klassik'],['glass','🪟','Shisha'],['neon','💡','Neon']].map(([k,e,n])=>{const on=!b.gold&&(b.st||'classic')===k;return `<div onclick="setSt('${id}','${k}')" style="flex:1;text-align:center;padding:10px 2px;border-radius:12px;border:2px solid ${on?'var(--pr)':'var(--bd)'};background:${on?'rgba(30,136,229,.12)':'var(--bg)'};cursor:pointer"><div style="font-size:24px">${e}</div><b style="font-size:13px">${n}</b><br><small>${on?'✓ Hozir':'Ochiq'}</small></div>`}).join('')}<div ${b.gold?'':`onclick="goldUp('${id}')"`} style="cursor:pointer;flex:1;text-align:center;padding:10px 2px;border-radius:12px;border:2px solid ${b.gold?'var(--pr)':'var(--bd)'};background:${b.gold?'rgba(30,136,229,.12)':'var(--bg)'}"><div style="font-size:24px">👑</div><b style="font-size:13px">Oltin</b><br><small>${b.gold?'✓ Hozir':'🪙 '+fmt(cfg.gp)}</small></div></div>
    <div class="sw" style="margin-top:12px">${COLORS.map(c=>`<i style="background:${c}" onclick="updB('${id}',{color:'${c}'})"></i>`).join('')}</div><div class="row">${TYPES.map(([k,n])=>`<button class="${(b.type||'glass')===k?'':'g'}" style="flex:1;padding:9px 4px" onclick="updB('${id}',{type:'${k}'})">${n}</button>`).join('')}</div><div class="row"><input id="lb_${id}" maxlength="20" placeholder="Bino nomi (xohlagan nom, 20 belgigacha)" value="${esc(b.label||'')}"><button onclick="setLabel('${id}')">Saqlash</button></div>
    <div class="row" style="margin-top:12px">${b.sale?`<span class="tag">Sotuvda: ${esc(b.sale)}</span><button class="g" onclick="updB('${id}',{sale:''})">Sotuvdan olish</button>`:`<input id="sp_${id}" placeholder="Narx (masalan 50 000 so‘m)"></div><div class="row"><input id="sk_${id}" inputmode="numeric" maxlength="19" placeholder="Pul tushadigan karta raqamingiz (16 raqam)"><button onclick="sell('${id}')">Sotuvga</button>`}</div></div>`}).join('')||'<div class="card">Sizda bino yo‘q. Savdo bo‘limidan sotib oling.</div>';
   h+=`<div class="card"><h3>⚙️ Sozlamalar</h3><small>Nikingiz shaharda hamma ko‘radigan nom</small><div class="row"><input id="nk2" maxlength="20" value="${esc(me.name||'')}" placeholder="Nikingiz"><button onclick="saveNick()">Saqlash</button></div></div>`;
@@ -336,9 +344,9 @@ function render(){
   h=farm()+`<div class="card"><h3>👥 Do‘stlarni chaqirish</h3><small>3 ta do‘stingiz havolangiz orqali qo‘shilsa 🪙 ${fmt(mrw('invite'))} olasiz. Bugun: ${inv()}/3</small><div class="row"><a class="tgb" href="https://t.me/share/url?url=${encodeURIComponent(ln)}&text=${encodeURIComponent('Sirli City o‘yiniga qo‘shiling! 🏙️')}" target="_blank" onclick="shareMark()">✈️ Telegramda yuborish</a><button class="g" onclick="copyInv()">🔗 Nusxalash</button></div></div><div class="card"><h3>Kundalik missiyalar</h3><small>Har kuni yangilanadi · jami 🪙 ${fmt(MIS.reduce((a,x)=>a+mrw(x[0]),0))}</small>`+MIS.map(([id,t,n])=>{const v=Math.min(id==='invite'?inv():(m.p[id]||0),n),ok=v>=n,cl=m.c[id];
    return `<div style="margin-top:12px"><div class="row"><span>${t}</span><b>🪙 ${fmt(mrw(id))}</b></div><div class="bar"><div style="width:${v/n*100}%"></div></div><div class="row"><small>${v}/${n}</small><button ${ok&&!cl?'':'disabled'} onclick="claim('${id}')">${cl?'Olingan ✓':'Olish'}</button></div></div>`}).join('')+`</div>`;
  }else if(tab==='lv'){h=lvView();
- }else if(tab==='inbox'){h=ibView();
+ }else if(tab==='inbox'){h=ibView();if(ib.some(x=>!x.read))setTimeout(readAll,700);
  }else if(tab==='top'){
-  h=`<div class="card"><h3>Reyting</h3>`+Object.entries(tot).sort((a,b)=>b[1]-a[1]).map(([o,f],i)=>`<div class="row"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc((players[o]||{}).name)}${o===uid?' (siz)':''}</span><b>${f} qavat</b></div>`).join('')+`</div>`;
+  h=`<div class="card"><h3>Reyting</h3>`+Object.entries(tot).sort((a,b)=>b[1]-a[1]).map(([o,f],i)=>`<div class="row"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc((players[o]||{}).name)}${o===uid?' (siz)':''}</span><b>${f} qavat · ❤️ ${LK[o]||0} · 👁 ${VS[o]||0}</b></div>`).join('')+`</div>`;
  }else if(tab==='chat'){
   SEEN('chat',Math.max(0,...chat.map(x=>x.ts||0)));
   h=`<div class="card"><h3>Umumiy chat</h3><div id="msgs">${chat.map(x=>`<div class="msg"><b>${esc(x.name)}</b> ${esc(x.text)}</div>`).join('')||'<small>Hozircha xabar yo‘q</small>'}</div>${me.blocked?'<p class="mu">Siz bloklangansiz.</p>':`<div class="row"><input id="ci" maxlength="200" placeholder="Xabar yozing…" onkeydown="if(event.key==='Enter')send()"><button onclick="send()">➤</button></div>`}</div>`;
