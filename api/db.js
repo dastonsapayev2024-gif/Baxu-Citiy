@@ -56,13 +56,25 @@ module.exports = async (req, res) => {
       const cur = {};
       r.rows.forEach(x => { cur[x.col] = { v: Number(x.v), n: x.n }; });
       const out = {};
+      // Faqat o'zgargan bo'limlar; ommaviy bo'limlarda faqat o'zgargan hujjatlar (delta)
+      const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals'];
+      const RESTR = { inbox: "data->>'to'=$2", orders: "data->>'uid'=$2", cq: "data->>'uid'=$2", reqs: "(data->>'from'=$2 or data->>'to'=$2)" };
       for (const c of cols) {
         const k = cur[c] || { v: 0, n: 0 };
         const o = vs[c];
         if (o && o.v === k.v && o.n === k.n) continue;
-        const d = await pool.query('select id,data from docs where col=$1 order by updated desc limit 1500', [c]);
         const slim = x => (c === 'orders' || c === 'reqs') && x.data && x.data.rc ? Object.assign({}, x.data, { rc: 1 }) : x.data;
-        out[c] = { v: k.v, n: k.n, docs: d.rows.filter(x => L.visible(c, x.data, a)).map(x => ({ id: x.id, data: slim(x) })) };
+        let rows, delta = false;
+        if (!a.admin && RESTR[c]) {
+          rows = (await pool.query('select id,data from docs where col=$1 and ' + RESTR[c] + ' order by updated desc limit 1500', [c, a.uid])).rows;
+        } else {
+          if (o && typeof o.v === 'number' && o.v > 0 && o.v <= k.v && DELTA.includes(c)) {
+            rows = (await pool.query('select id,data from docs where col=$1 and updated>=$2 order by updated desc limit 1500', [c, o.v - 5000])).rows;
+            delta = rows.length < 1500;
+          }
+          if (!delta) rows = (await pool.query('select id,data from docs where col=$1 order by updated desc limit 1500', [c])).rows;
+        }
+        out[c] = { v: k.v, n: k.n, delta, docs: rows.filter(x => L.visible(c, x.data, a)).map(x => ({ id: x.id, data: slim(x) })) };
       }
       return res.json({ cols: out });
     }
