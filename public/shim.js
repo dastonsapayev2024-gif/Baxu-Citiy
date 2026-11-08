@@ -7,6 +7,7 @@
   var DEVU = new URLSearchParams(location.search).get('dev') || '';
   if (tg) {
     try { tg.ready(); tg.expand(); } catch (e) {}
+    try { if (tg.requestWriteAccess && !localStorage.getItem('wa1')) { localStorage.setItem('wa1', '1'); setTimeout(function () { try { tg.requestWriteAccess(function () {}); } catch (e) {} }, 4000); } } catch (e) {}
     try { tg.disableVerticalSwipes && tg.disableVerticalSwipes(); } catch (e) {}
     try {
       var sp = tg.initDataUnsafe && tg.initDataUnsafe.start_param;
