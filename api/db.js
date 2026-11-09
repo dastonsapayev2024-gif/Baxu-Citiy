@@ -30,6 +30,30 @@ async function pushTg(pool, nd) {
 }
 
 
+// ---- Bir vaqtdagi ko'p so'rovni bitta so'rovga birlashtirish (12+ odam birdan kirganda) ----
+const AGG = new Map();
+function aggregate(pool, cols) {
+  const key = cols.join(',');
+  const e = AGG.get(key);
+  if (e && Date.now() - e.t < 800) return e.p;
+  const p = pool.query('select col,max(updated)::text v,count(*)::int n from docs where col=any($1) group by col', [cols]).then(r => r.rows);
+  const ne = { t: Date.now(), p };
+  AGG.set(key, ne);
+  p.catch(() => { if (AGG.get(key) === ne) AGG.delete(key); });
+  return p;
+}
+const FULL = new Map();
+function fullRows(pool, c, k) {
+  const key = k.v + '|' + k.n;
+  const e = FULL.get(c);
+  if (e && e.key === key) return e.p;
+  const p = pool.query('select id,data from docs where col=$1 order by updated desc limit 1500', [c]).then(r => r.rows);
+  const ne = { key, p };
+  FULL.set(c, ne);
+  p.catch(() => { if (FULL.get(c) === ne) FULL.delete(c); });
+  return p;
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return bad(res, 405, 'POST kerak');
@@ -52,9 +76,9 @@ module.exports = async (req, res) => {
     if (b.op === 'sync') {
       const vs = b.v || {};
       const cols = L.KNOWN.filter(c => L.canRead(c, a));
-      const r = await pool.query('select col,max(updated)::text v,count(*)::int n from docs where col=any($1) group by col', [cols]);
+      const rws = await aggregate(pool, cols);
       const cur = {};
-      r.rows.forEach(x => { cur[x.col] = { v: Number(x.v), n: x.n }; });
+      rws.forEach(x => { cur[x.col] = { v: Number(x.v), n: x.n }; });
       const out = {};
       // Faqat o'zgargan bo'limlar; ommaviy bo'limlarda faqat o'zgargan hujjatlar (delta)
       const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals'];
@@ -72,7 +96,7 @@ module.exports = async (req, res) => {
             rows = (await pool.query('select id,data from docs where col=$1 and updated>=$2 order by updated desc limit 1500', [c, o.v - 5000])).rows;
             delta = rows.length < 1500;
           }
-          if (!delta) rows = (await pool.query('select id,data from docs where col=$1 order by updated desc limit 1500', [c])).rows;
+          if (!delta) rows = await fullRows(pool, c, k);
         }
         out[c] = { v: k.v, n: k.n, delta, docs: rows.filter(x => L.visible(c, x.data, a)).map(x => ({ id: x.id, data: slim(x) })) };
       }
@@ -96,6 +120,7 @@ module.exports = async (req, res) => {
       const patch = b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : null;
       if (b.op !== 'delete' && !patch) return bad(res, 400, 'Ma’lumot noto‘g‘ri');
       const cl = await pool.connect();
+      let pushNd = null;
       try {
         await cl.query('begin');
         const cur = await cl.query('select data from docs where col=$1 and id=$2 for update', [col, id]);
@@ -110,10 +135,13 @@ module.exports = async (req, res) => {
           'insert into docs(col,id,data,updated) values($1,$2,$3,$4) on conflict(col,id) do update set data=excluded.data,updated=excluded.updated',
           [col, id, JSON.stringify(nd), Date.now()]);
         await cl.query('commit');
-        if (col === 'inbox' && b.op === 'add') await pushTg(pool, nd);
-        return res.json({ ok: true, id });
+        AGG.clear();
+        if (col === 'inbox' && b.op === 'add') pushNd = nd;
       } catch (e) { try { await cl.query('rollback'); } catch (_) {} throw e; }
       finally { cl.release(); }
+      // Bog'lanish bo'shatilgandan keyin yuboramiz (kutish paytida ulanishni band qilmaslik uchun)
+      if (pushNd) await pushTg(pool, pushNd);
+      return res.json({ ok: true, id });
     }
 
     return bad(res, 400, 'Noma’lum amal');
