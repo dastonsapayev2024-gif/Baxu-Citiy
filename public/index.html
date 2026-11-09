@@ -466,7 +466,7 @@ try{init3()}catch(e){$('#map').insertAdjacentHTML('afterbegin','<div class="card
  if(!db||!user){$('#app').innerHTML='<div class="card">Bu o‘yin Telegram orqali ochiladi. Botdagi o‘yin tugmasini bosing.<br><small>'+esc(window.__ie||'')+'</small></div>';return}
  uid=await user.id();isAdmin=user.isOwner();setInterval(tickC,1000);setInterval(()=>{if(me)col('players').doc(uid).update({seen:Date.now()}).catch(()=>{})},40000);
  const L=(n,f)=>col(n).onSnapshot(s=>f(s.docs.map(d=>({id:d.id,...d.data()}))),e=>toast(e.message));
- db.doc('config/main').onSnapshot(s=>{if(s.exists)cfg=Object.assign(cfg,s.data());render()});
+ db.doc('config/main').onSnapshot(s=>{if(s.exists)cfg=Object.assign(cfg,s.data());if(s.exists&&isAdmin&&!cfg.bank&&!window.__bk){window.__bk=1;saveC({bank:{end:Date.now()+7*864e5,lim:50000}},'Bank aksiyasi avtomatik boshlandi (7 kun)')}render()});
  L('players',a=>{players={};a.forEach(p=>players[p.id]=p);me=players[uid]||null;rp=1;clearTimeout(t);chk();render()});
  L('b',a=>{bs={};a.forEach(b=>bs[b.id]=b);rb=1;chk();render()});L('likes',a=>{lk=a;render()});L('inbox',a=>{const n=ib.length;ib=a.filter(x=>x.to===uid).sort((x,y)=>y.ts-x.ts);if(ibL&&ib.length>n)toast('📨 '+ib[0].text);ibL=1;render()});
  L('approvals',a=>{apprs={};a.forEach(x=>apprs[x.id]=x);render()});if(isAdmin){L('orders',a=>{ords=a.sort((x,y)=>y.ts-x.ts);render()});L('ledger',a=>{led=a.sort((x,y)=>y.ts-x.ts).slice(0,60);render()});L('audit',a=>{aud=a.sort((x,y)=>y.ts-x.ts).slice(0,60);render()})}
