@@ -54,6 +54,18 @@ function fullRows(pool, c, k) {
   return p;
 }
 
+// ---- Chatni avtomatik tozalash: 1 soatdan eski xabarlar bazadan o'chadi (daqiqada ko'pi bilan 1 marta tekshiriladi) ----
+const CHAT_TTL = 60 * 60 * 1000;
+let lastClean = 0;
+async function cleanChat(pool) {
+  if (Date.now() - lastClean < 60000) return;
+  lastClean = Date.now();
+  try {
+    const r = await pool.query("delete from docs where col='chat' and updated<$1", [Date.now() - CHAT_TTL]);
+    if (r.rowCount) AGG.clear();
+  } catch (e) { console.error('chat tozalash xatosi', e && e.message); }
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return bad(res, 405, 'POST kerak');
@@ -76,6 +88,7 @@ module.exports = async (req, res) => {
     if (b.op === 'sync') {
       const vs = b.v || {};
       const cols = L.KNOWN.filter(c => L.canRead(c, a));
+      await cleanChat(pool);
       const rws = await aggregate(pool, cols);
       const cur = {};
       rws.forEach(x => { cur[x.col] = { v: Number(x.v), n: x.n }; });
