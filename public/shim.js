@@ -15,19 +15,37 @@
     } catch (e) {}
   }
 
-  var wseq = 0, busy = false, timer = null, uid = null, admin = false, idle = 0;
+  var wseq = 0, busy = false, timer = null, uid = null, admin = false, idle = 0, fails = 0;
   var cache = {}, ver = {}, subs = {};
 
-  function api(body) {
+  function raw(body, ms) {
     var h = { 'content-type': 'application/json' };
     if (INIT) h['x-tg-init'] = INIT;
     if (DEVU) h['x-dev-user'] = DEVU;
-    return fetch('/api/db', { method: 'POST', headers: h, body: JSON.stringify(body) }).then(function (r) {
+    var ac = window.AbortController ? new AbortController() : null;
+    var tm = ac ? setTimeout(function () { ac.abort(); }, ms) : 0;
+    return fetch('/api/db', { method: 'POST', headers: h, body: JSON.stringify(body), signal: ac ? ac.signal : undefined }).then(function (r) {
+      clearTimeout(tm);
       return r.json().catch(function () { return {}; }).then(function (j) {
-        if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+        if (!r.ok) { var e = new Error(j.error || ('HTTP ' + r.status)); e.status = r.status; throw e; }
         return j;
       });
-    });
+    }, function (e) { clearTimeout(tm); throw e; });
+  }
+  // O'qish so'rovlari server band bo'lsa 2 martagacha o'zi qayta uriniladi; yozish qayta yuborilmaydi
+  function api(body) {
+    if (body.op !== 'sync' && body.op !== 'me' && body.op !== 'get') return raw(body, 20000);
+    var n = 0;
+    function go() {
+      return raw(body, 12000).catch(function (e) {
+        if ((!e.status || e.status >= 500) && n < 2) {
+          n++;
+          return new Promise(function (r) { setTimeout(r, 600 * n + Math.random() * 600); }).then(go);
+        }
+        throw e;
+      });
+    }
+    return go();
   }
   function write(body) {
     wseq++;
@@ -64,6 +82,7 @@
     busy = true;
     var s0 = wseq;
     api({ op: 'sync', v: ver }).then(function (j) {
+      fails = 0;
       if (s0 !== wseq) return;
       var ks = Object.keys(j.cols || {}), redo = false;
       idle = ks.length ? 0 : Math.min(idle + 1, 30);
@@ -80,10 +99,15 @@
         emit(c);
       });
       if (redo) kick(0);
-    }).catch(errAll).then(function () { busy = false; });
+    }).catch(function (e) { fails++; if (fails >= 3) errAll(e); }).then(function () { busy = false; });
   }
   function kick(ms) { setTimeout(sync, ms || 0); }
-  function tick() { sync(); timer = setTimeout(tick, idle > 10 ? 6000 : 3000); }
+  // Xato bo'lsa so'rovlar orasi uzayadi (server bosimini oshirmaslik uchun); tasodifiy qo'shimcha hamma bir vaqtda urilmasligi uchun
+  function tick() {
+    sync();
+    var d = fails ? Math.min(30000, 3000 * Math.pow(2, Math.min(fails, 4))) : (idle > 10 ? 6000 : 3000);
+    timer = setTimeout(tick, d + Math.random() * 1000);
+  }
   function start() { if (!timer) { timer = 1; tick(); } else kick(0); }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) kick(0); });
 
@@ -134,7 +158,7 @@
       uid = r.uid; admin = !!r.admin;
       if (r.appLink) window.APP_LINK = r.appLink;
       return true;
-    }).catch(function (e) { console.error(e); window.__ie = String(e && e.message || e); return false; });
+    }).catch(function (e) { console.error(e); window.__ie = String(e && e.message || e); initP = null; return false; });
     return initP;
   }
   window.claude = {
