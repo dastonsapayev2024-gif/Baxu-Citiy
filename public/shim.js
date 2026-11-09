@@ -15,6 +15,19 @@
     } catch (e) {}
   }
 
+  // Telefon soati o'zgartirilsa ham o'yin SERVER vaqti bilan ishlaydi
+  var _D = window.Date, _N = _D.now, off = 0;
+  function SN() { return _N.call(_D) + off; }
+  function FD() {
+    var a = arguments;
+    if (!(this instanceof FD)) return new _D(SN()).toString();
+    if (a.length === 0) return new _D(SN());
+    if (a.length === 1) return new _D(a[0]);
+    return new _D(a[0], a[1], a[2] === undefined ? 1 : a[2], a[3] || 0, a[4] || 0, a[5] || 0, a[6] || 0);
+  }
+  FD.prototype = _D.prototype; FD.UTC = _D.UTC; FD.parse = _D.parse; FD.now = SN;
+  window.Date = FD;
+
   var wseq = 0, busy = false, timer = null, uid = null, admin = false, idle = 0, fails = 0;
   var cache = {}, ver = {}, subs = {};
 
@@ -23,10 +36,12 @@
     if (INIT) h['x-tg-init'] = INIT;
     if (DEVU) h['x-dev-user'] = DEVU;
     var ac = window.AbortController ? new AbortController() : null;
+    var t0 = _N.call(_D);
     var tm = ac ? setTimeout(function () { ac.abort(); }, ms) : 0;
     return fetch('/api/db', { method: 'POST', headers: h, body: JSON.stringify(body), signal: ac ? ac.signal : undefined }).then(function (r) {
       clearTimeout(tm);
       return r.json().catch(function () { return {}; }).then(function (j) {
+        if (j && typeof j.now === 'number') off = j.now - (t0 + _N.call(_D)) / 2;
         if (!r.ok) { var e = new Error(j.error || ('HTTP ' + r.status)); e.status = r.status; throw e; }
         return j;
       });
