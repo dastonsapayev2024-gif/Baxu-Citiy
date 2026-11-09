@@ -272,7 +272,7 @@ function adminView(){
  return h}
 function goldUp(id){if(me.coins<cfg.gp)return toast('Coin yetarli emas');upd({coins:me.coins-cfg.gp});updB(id,{gold:true});toast('Bino oltinga aylandi 🥇')}
 const CH=72e5;const chestLeft=()=>me?Math.max(0,(me.ch||0)+CH-Date.now()):0;
-function openChest(){if(!me||chestLeft())return toast('Sandiq hali yopiq');const a=200+Math.floor(Math.random()*21)*10;upd({coins:me.coins+a,ch:Date.now(),m:prog('chest')});toast('🎁 Sandiqdan +'+a+' coin!')}
+function openChest(){if(!me||chestLeft())return toast('Sandiq hali yopiq');const a=1000;upd({coins:me.coins+a,ch:Date.now(),m:prog('chest')});toast('🎁 Sandiqdan +'+a+' coin!')}
 const SEEN=(k,v)=>{try{if(v===undefined)return localStorage.getItem('sc_'+uid+k);localStorage.setItem('sc_'+uid+k,String(v))}catch(e){return null}};
 function alerts(){const a={};if(!me)return a;const m=curM();
  let c=MIS.some(([id,t,n])=>{const v=Math.min(id==='invite'?inv():(m.p[id]||0),n);return v>=n&&!m.c[id]});
