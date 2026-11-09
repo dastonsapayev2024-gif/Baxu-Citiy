@@ -117,7 +117,7 @@ module.exports = async (req, res) => {
     const pool = L.pg();
 
     if (b.op === 'me') {
-      return res.json({ uid: a.uid, admin: a.admin, appLink: process.env.APP_LINK || '' });
+      return res.json({ now: Date.now(), uid: a.uid, admin: a.admin, appLink: process.env.APP_LINK || '' });
     }
 
     if (b.op === 'sync') {
@@ -148,7 +148,7 @@ module.exports = async (req, res) => {
         }
         out[c] = { v: k.v, n: k.n, delta, docs: rows.filter(x => L.visible(c, x.data, a)).map(x => ({ id: x.id, data: slim(x) })) };
       }
-      return res.json({ cols: out });
+      return res.json({ now: Date.now(), cols: out });
     }
 
     const col = String(b.col || '');
@@ -187,6 +187,13 @@ module.exports = async (req, res) => {
             return bad(res, 403, 'Qoidabuzarlik aniqlandi: hisobingiz bloklandi');
           }
         }
+        if (!a.admin && col === 'players' && id === a.uid && old && nd && b.op !== 'delete') {
+          // Vaqt maydonlari faqat oldinga va server vaqtidan oshmasligi kerak (soatni o'zgartirib coin olishga qarshi)
+          const sn = Date.now();
+          for (const k of ['st', 'ct', 'ch', 'sty']) {
+            if (typeof nd[k] === 'number') { let v = nd[k]; if (typeof old[k] === 'number' && v < old[k]) v = old[k]; if (v > sn) v = sn; nd[k] = v; }
+          }
+        }
         if (b.op === 'delete') await cl.query('delete from docs where col=$1 and id=$2', [col, id]);
         else await cl.query(
           'insert into docs(col,id,data,updated) values($1,$2,$3,$4) on conflict(col,id) do update set data=excluded.data,updated=excluded.updated',
@@ -199,7 +206,7 @@ module.exports = async (req, res) => {
       finally { cl.release(); }
       // Bog'lanish bo'shatilgandan keyin yuboramiz (kutish paytida ulanishni band qilmaslik uchun)
       if (pushNd) await pushTg(pool, pushNd);
-      return res.json({ ok: true, id });
+      return res.json({ now: Date.now(), ok: true, id });
     }
 
     return bad(res, 400, 'Noma’lum amal');
