@@ -54,6 +54,41 @@ function fullRows(pool, c, k) {
   return p;
 }
 
+// ---- Bloklangan o'yinchilar va firibgarlikni avtomatik bloklash ----
+const BL = new Map();
+async function isBlocked(pool, uid) {
+  const e = BL.get(uid);
+  if (e && Date.now() - e.t < 5000) return e.b;
+  const r = await pool.query("select data->>'blocked' b from docs where col='players' and id=$1", [uid]);
+  const b = !!(r.rows[0] && r.rows[0].b === 'true');
+  BL.set(uid, { t: Date.now(), b });
+  return b;
+}
+async function tgAdmin(text) {
+  try {
+    const token = String(process.env.BOT_TOKEN || '').replace(/\s+/g, ''), to = String(process.env.ADMIN_TG_ID || '').trim();
+    if (!token || !/^\d{1,15}$/.test(to)) return;
+    const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 2500);
+    await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+      method: 'POST', headers: { 'content-type': 'application/json' }, signal: ac.signal,
+      body: JSON.stringify({ chat_id: to, text: String(text).slice(0, 500), disable_web_page_preview: true })
+    }).catch(() => {});
+    clearTimeout(tm);
+  } catch (e) { /* ahamiyatsiz */ }
+}
+async function autoBlock(pool, uid, name, why) {
+  try {
+    const now = Date.now();
+    await pool.query("update docs set data = data || $1::jsonb, updated=$2 where col='players' and id=$3",
+      [JSON.stringify({ blocked: true, bwhy: 'auto: ' + why }), now, uid]);
+    await pool.query("insert into docs(col,id,data,updated) values('audit',$1,$2,$3)",
+      [crypto.randomBytes(10).toString('hex'), JSON.stringify({ ts: now, text: 'AVTO-BLOK: ' + (name || uid) + ' — ' + why, by: 'server' }), now]);
+    BL.set(uid, { t: now, b: true });
+    AGG.clear();
+    await tgAdmin('🚫 Avto-blok: ' + (name || uid) + '\n' + why);
+  } catch (e) { console.error('avto-blok xatosi', e && e.message); }
+}
+
 // ---- Chatni avtomatik tozalash: 1 soatdan eski xabarlar bazadan o'chadi (daqiqada ko'pi bilan 1 marta tekshiriladi) ----
 const CHAT_TTL = 60 * 60 * 1000;
 let lastClean = 0;
@@ -132,6 +167,7 @@ module.exports = async (req, res) => {
       if (!id || id.length > 128) return bad(res, 400, 'ID noto‘g‘ri');
       const patch = b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : null;
       if (b.op !== 'delete' && !patch) return bad(res, 400, 'Ma’lumot noto‘g‘ri');
+      if (!a.admin && await isBlocked(pool, a.uid)) return bad(res, 403, 'Siz bloklangansiz');
       const cl = await pool.connect();
       let pushNd = null;
       try {
@@ -143,12 +179,21 @@ module.exports = async (req, res) => {
         else if (b.op !== 'delete') nd = patch;
         if (nd && JSON.stringify(nd).length > (col === 'orders' || col === 'reqs' ? 150000 : 30000)) { await cl.query('rollback'); return bad(res, 413, 'Juda katta'); }
         if (!L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
+        if (!a.admin && col === 'players' && id === a.uid && b.op !== 'delete' && old && patch && patch.coins !== undefined) {
+          const why = L.cheat(old, nd);
+          if (why) {
+            await cl.query('rollback');
+            await autoBlock(pool, a.uid, old.name, why);
+            return bad(res, 403, 'Qoidabuzarlik aniqlandi: hisobingiz bloklandi');
+          }
+        }
         if (b.op === 'delete') await cl.query('delete from docs where col=$1 and id=$2', [col, id]);
         else await cl.query(
           'insert into docs(col,id,data,updated) values($1,$2,$3,$4) on conflict(col,id) do update set data=excluded.data,updated=excluded.updated',
           [col, id, JSON.stringify(nd), Date.now()]);
         await cl.query('commit');
         AGG.clear();
+        if (col === 'players') BL.clear();
         if (col === 'inbox' && b.op === 'add') pushNd = nd;
       } catch (e) { try { await cl.query('rollback'); } catch (_) {} throw e; }
       finally { cl.release(); }
