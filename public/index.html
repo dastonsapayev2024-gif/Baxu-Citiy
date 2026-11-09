@@ -295,7 +295,7 @@ function tickC(){const e=$('#chest'),o=$('#on');if(o)o.textContent='🟢 '+Math.
 function go(t){if(fsOn&&t!=='city')fs();tab=t;sel=null;buyS=null;if(t==='city'&&!fsOn){tab='city';fs();return}render()}
 
 const G=12,PX=Math.PI/180,V={x:0,z:0,d:150,yaw:.6,pitch:42*PX,vx:0,vz:0},pts=new Map(),mc={};
-let RA=0,LTOP={},HY=0,ORB=0,ORBL=0,introDone=0,HALF=0,VS0=null,LBS=[],BX=[],LO=0,marks=[],crowns=[],TOPB='',MAPR=300,rd,sc,cm,grp,need=1,sig='',pick=[],lw=0,lh=0,g0=null,moved=0,t0=0,posById={},hashDone=0;
+let FOCID='',RA=0,LTOP={},HY=0,ORB=0,ORBL=0,introDone=0,HALF=0,VS0=null,LBS=[],BX=[],LO=0,marks=[],crowns=[],TOPB='',MAPR=300,rd,sc,cm,grp,need=1,sig='',pick=[],lw=0,lh=0,g0=null,moved=0,t0=0,posById={},hashDone=0;
 const cv=(w,h,f)=>{const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'),w,h);return c};
 const rep=t=>{t.wrapS=t.wrapT=THREE.RepeatWrapping;t.anisotropy=4;return t};
 function c3(c){if(String(c)[0]==='#')return new THREE.Color(c);const m=String(c).match(/[\d.]+/g)||[200,60,55];return new THREE.Color().setHSL(m[0]/360,m[1]/100,m[2]/100)}
@@ -321,7 +321,7 @@ addEventListener('hashchange',()=>applyHash(1));
 function goB(id){if(!sc||!posById[id])return toast('Bino xaritada topilmadi');sel=id;foc(id);tab='city';if(!fsOn)fs();else render()}
 function rs(){const el=$('#map'),w=el.clientWidth,h=el.clientHeight;if(!w||!h||(w===lw&&h===lh))return;lw=w;lh=h;rd.setSize(w,h);cm.aspect=w/h;cm.updateProjectionMatrix();need=1}
 function cam(){V.d=Math.min(600,Math.max(14,V.d));V.pitch=Math.min(1.45,Math.max(.06,V.pitch));{const R=MAPR-25;V.x=Math.max(-R,Math.min(R,V.x));V.z=Math.max(-R,Math.min(R,V.z))}const{x,z,d,yaw,pitch}=V,FH=HALF?HY:(V.h||0);cm.position.set(x+d*Math.sin(yaw)*Math.cos(pitch),d*Math.sin(pitch)+FH,z+d*Math.cos(yaw)*Math.cos(pitch));cm.lookAt(x,FH||Math.max(0,.7-pitch)*45,z);need=1}
-function foc(id){const P=posById[id];if(!P)return;V.x=P[0];V.z=P[1];const t=LTOP[id]||24;V.d=Math.max(55,Math.min(130,t*1.1+34));V.pitch=.7;V.h=t*.5+3;cam();need=1}
+function foc(id){const P=posById[id];if(!P)return;V.x=P[0];V.z=P[1];const t=LTOP[id]||24;FOCID=id;V.d=Math.max(60,Math.min(135,t*1.25+38));V.pitch=.7;V.h=t*.5+9;cam();need=1}
 function myB(){const id=bs[uid]?uid:Object.keys(bs).find(i=>bs[i].owner===uid);if(!id||!posById[id])return toast('Binoyingiz xaritada topilmadi');foc(id)}
 const rot=d=>{V.yaw+=d*PX;cam()},zoom=f=>{V.d=Math.min(1000,Math.max(14,V.d/Math.pow(f,.7)));cam()},home=()=>{V.x=V.z=0;V.d=150;V.pitch=42*PX;cam()},tilt=d=>{V.pitch=Math.min(86,Math.max(4,V.pitch/PX+d*.6))*PX;cam()};
 const rc=new THREE.Raycaster(),mv=new THREE.Vector2();
@@ -344,7 +344,7 @@ function lab(t,big){const c=cv(512,128,(g,w,h)=>{
  g.shadowColor='transparent';g.lineWidth=4;g.strokeStyle='rgba(255,255,255,.88)';g.stroke();
  g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(t,w/2,h/2-2)});
  const tx=new THREE.CanvasTexture(c);tx.minFilter=THREE.LinearFilter;tx.generateMipmaps=false;const s=new THREE.Sprite(new THREE.SpriteMaterial({map:tx,transparent:true,depthWrite:false,depthTest:true,fog:false}));s.scale.set(big?18:10,big?4.5:2.5,1);s.userData.bs=[s.scale.x,s.scale.y];return s}
-function occl(){const c=cm.position,cx=c.x,cy=c.y,cz=c.z;for(let i=0;i<LBS.length;i++){const L=LBS[i];{const u=L.s.userData,z0=u.bs;if(z0){const k=(HALF&&L.id===uid)?(u.em?2:3):1;L.s.scale.set(z0[0]*k,z0[1]*k,1);if(u.em)L.s.position.y=u.by+(k>1?4.5:0)}}const dx=L.x-cx,dy=L.s.position.y-cy,dz=L.z-cz;let hid=Math.hypot(dx,dy,dz)>(L.big?520:230);for(let j=0;j<BX.length&&!hid;j++){const B=BX[j];if(B.id===L.id)continue;let a=0,b=1;
+function occl(){const c=cm.position,cx=c.x,cy=c.y,cz=c.z;for(let i=0;i<LBS.length;i++){const L=LBS[i];{const u=L.s.userData,z0=u.bs;if(z0){const k=(HALF&&L.id===uid)?(u.em?2:3):(!HALF&&V.h>4&&L.id===FOCID)?(u.em?1.6:2):1;L.s.scale.set(z0[0]*k,z0[1]*k,1);if(u.em)L.s.position.y=u.by+(k>1?(HALF?4.5:2.5):0)}}const dx=L.x-cx,dy=L.s.position.y-cy,dz=L.z-cz;let hid=Math.hypot(dx,dy,dz)>(L.big?520:230);for(let j=0;j<BX.length&&!hid;j++){const B=BX[j];if(B.id===L.id)continue;let a=0,b=1;
  const ax=[[cx,dx,B.x-B.r,B.x+B.r],[cy,dy,0,B.t],[cz,dz,B.z-B.r,B.z+B.r]];let ok=true;
  for(let k=0;k<3;k++){const o=ax[k][0],d=ax[k][1],lo=ax[k][2],hi=ax[k][3];if(Math.abs(d)<1e-6){if(o<lo||o>hi){ok=false;break}}else{let t1=(lo-o)/d,t2=(hi-o)/d;if(t1>t2){const q=t1;t1=t2;t2=q}if(t1>a)a=t1;if(t2<b)b=t2;if(a>b){ok=false;break}}}
  if(ok&&a<.985)hid=true}L.s.visible=!hid}}
