@@ -91,7 +91,7 @@ const $=s=>document.querySelector(s),col=n=>db.collection(n);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const mper=()=>{const d=new Date();return dkey(d.getTime())+(d.getHours()<12?'a':'b')},mstart=()=>{const d=new Date();d.setHours(d.getHours()<12?0:12,0,0,0);return d.getTime()},mnext=()=>{const d=new Date(mstart());d.setHours(d.getHours()+12);return d.getTime()};
 const dkey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')},today=()=>dkey(Date.now()),fmt=n=>(+n).toLocaleString('ru');
-const price=(f,g)=>{const b0=Math.max(1,+cfg.fb||100),st=(5000-b0)/24;return Math.round((b0+Math.max(0,f-1)*st)/10)*10};
+const price=(f,g)=>{const b0=Math.max(1,+cfg.fb||100),st=(5000-b0)/24,o=x=>Math.round((b0+Math.max(0,x-1)*st)/10)*10;return f<=30?o(f):Math.min(o(f),o(30)+(f-30)*100)};
 const tgl=t=>t?`<a href="https://t.me/${esc(String(t).replace('@',''))}" target="_blank">@${esc(String(t).replace('@',''))}</a>`:'<small>nik yo‘q</small>';
 const oname=b=>(players[b.owner]||{}).name||'?';
 const bname=b=>b.label?String(b.label):((players[b.owner]||{}).adm?'Baxu':oname(b))+' binosi';
