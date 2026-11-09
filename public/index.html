@@ -96,6 +96,12 @@ const tgl=t=>t?`<a href="https://t.me/${esc(String(t).replace('@',''))}" target=
 const oname=b=>(players[b.owner]||{}).name||'?';
 const bname=b=>b.label?String(b.label):((players[b.owner]||{}).adm?'Baxu':oname(b))+' binosi';
 const mine=()=>Object.entries(bs).filter(([i,b])=>b.owner===uid);
+let giftBusy=0;
+function giftChk(){if(giftBusy||!me||me.gf!==1||me.blocked)return;giftBusy=1;const d=document.createElement('div');d.id='gift';d.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(5,10,30,.78);display:flex;align-items:center;justify-content:center;padding:20px';
+ d.innerHTML='<style>@keyframes gbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-14px) rotate(4deg)}}@keyframes gpop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}</style><div style="text-align:center;color:#fff;max-width:340px"><div style="font-size:22px;font-weight:800;margin-bottom:6px">Xush kelibsiz! 🎉</div><div style="opacity:.9;margin-bottom:18px">Yangi o‘yinchi sovg‘asi sizni kutmoqda</div><div id="gbox" style="font-size:130px;line-height:1;cursor:pointer;animation:gbob 1.2s ease-in-out infinite">🎁</div><div id="gtx" style="margin-top:18px;font-weight:700">Ochish uchun sovg‘ani bosing 👆</div></div>';
+ document.body.appendChild(d);
+ $('#gbox').onclick=()=>{if(!me||me.gf!==1)return;const b=$('#gbox');b.onclick=null;b.style.animation='gpop .6s both';b.textContent='🪙';$('#gtx').innerHTML='<div style="font-size:34px;font-weight:800;color:#ffd23f">+5 000 coin!</div><button id="gok" style="margin-top:16px;padding:12px 30px;border:0;border-radius:14px;background:#2ea44f;color:#fff;font-size:17px;font-weight:700">Rahmat!</button>';
+  upd({coins:(me.coins||0)+5000,gf:2});$('#gok').onclick=()=>{d.remove();giftBusy=0;toast('🪙 5 000 coin hisobingizga tushdi');render()}}}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000)}
 function curM(){let m=me.m;if(!m||m.day!==mper())m={day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}};return JSON.parse(JSON.stringify(m))}
 function upd(p){Object.assign(me,p);players[uid]=me;render();return col('players').doc(uid).update(p).catch(e=>toast(e.message))}
@@ -105,7 +111,7 @@ function nickOk(n){return !Object.entries(players).some(([i,p])=>i!==uid&&String
 function tgAuto(){try{const u=window.Telegram.WebApp.initDataUnsafe.user;const t=u&&u.username?String(u.username):'';return t&&tgOk(t)?t:''}catch(e){return ''}}
 function join(){const n=$('#nick').value.trim().replace(/\s+/g,' ').slice(0,20);if(n.length<2)return toast('Nik kamida 2 ta belgi bo‘lsin');if(!isAdmin&&!nickOk(n))return toast('Bu nik band, boshqasini tanlang');const t=tgAuto();
  const c=`hsl(${Math.random()*360|0} 65% 55%)`;
- col('players').doc(uid).set({name:isAdmin?'Baxu':n,tg:t,coins:300,color:c,blocked:false,adm:isAdmin,nb:true,ad:1,ald:today(),...(refId()?{ref:refId()}:{}),m:{day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}},hc:{day:'',n:0},ts:Date.now(),st:Date.now(),ct:Date.now()});
+ col('players').doc(uid).set({name:isAdmin?'Baxu':n,tg:t,coins:300,gf:1,color:c,blocked:false,adm:isAdmin,nb:true,ad:1,ald:today(),...(refId()?{ref:refId()}:{}),m:{day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}},hc:{day:'',n:0},ts:Date.now(),st:Date.now(),ct:Date.now()});
  col('b').doc(uid).set({owner:uid,floors:1,color:c,sale:'',ts:Date.now()})}
 function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(!me.st){p.st=Date.now();p.ct=Date.now()}
@@ -375,6 +381,7 @@ function build(){const T=THREE,A=e=>(e[1].ctr||(players[e[1].owner]||{}).adm)?1:
 
 
 function render(){
+ giftChk();
  if(!(rp&&rb))return;
  if(document.activeElement&&document.activeElement.tagName==='INPUT'&&tab!=='chat')return;
  $('#map').style.display=(tab==='city'&&me)?'block':'none';const fc=$('#fsc');if(fc)fc.innerHTML=(fsOn&&me&&sel&&bs[sel])?bcard(sel):'';if(sc&&tab==='city'&&me){if(!fsInit){fsInit=1;if(!fsOn)fs()}rs();build();need=1;if(!hashDone&&Object.keys(posById).length){hashDone=1;applyHash(0)}}
@@ -412,7 +419,7 @@ function render(){
   h=`<div class="card"><h3>Reyting</h3><small>Ustini bossangiz, binosiga olib boradi 📍</small>`+Object.entries(tot).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).map(([o,f],i)=>`<div class="row" style="cursor:pointer" onclick="goB('${o}')"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc((players[o]||{}).name)}${o===uid?' (siz)':''}</span><b>${f} qavat · ❤️ ${LK[o]||0} · 👁 ${VS[o]||0}</b></div>`).join('')+`</div>`;
  }else if(tab==='chat'){
   SEEN('chat',Math.max(0,...chat.map(x=>x.ts||0)));
-  h=`<div class="card"><h3>Umumiy chat</h3><div id="msgs">${chat.map(x=>`<div class="msg"><b>${esc(x.name)}</b> ${esc(x.text)}</div>`).join('')||'<small>Hozircha xabar yo‘q</small>'}</div>${me.blocked?'<p class="mu">Siz bloklangansiz.</p>':`<div class="row"><input id="ci" maxlength="200" placeholder="Xabar yozing…" onkeydown="if(event.key==='Enter')send()"><button onclick="send()">➤</button></div>`}</div>`;
+  h=`<div class="card"><h3>Umumiy chat</h3><div id="msgs">${chat.map(x=>`<div class="msg"><b style="cursor:pointer;text-decoration:underline" onclick="goB('${esc(x.uid||'')}')">${esc(x.name)}</b> ${esc(x.text)}</div>`).join('')||'<small>Hozircha xabar yo‘q</small>'}</div>${me.blocked?'<p class="mu">Siz bloklangansiz.</p>':`<div class="row"><input id="ci" maxlength="200" placeholder="Xabar yozing…" onkeydown="if(event.key==='Enter')send()"><button onclick="send()">➤</button></div>`}</div>`;
  }else if(tab==='trade'){
   const inc=reqs.filter(r=>r.to===uid&&bs[r.b]&&bs[r.b].owner===uid),sale=es.filter(([i,b])=>b.sale&&b.owner!==uid);SEEN('sale',sale.map(x=>x[0]).sort().join(','));
   h=`<div class="card"><h3>Menga kelgan so‘rovlar</h3>`+(inc.map(r=>`<div class="row"><span>${esc(r.fromName)} ${tgl(r.fromTg)}<br><small>${esc(bname(bs[r.b]))} · Telegramda gaplashing, keyin tasdiqlang yoki rad eting</small></span><span style="display:flex;flex-direction:column;gap:6px"><button class="y" onclick="give('${r.id}')">✅ Tasdiqlash</button><button class="r" onclick="rejectReq('${r.id}')">❌ Rad etish</button></span></div>`).join('')||'<small>So‘rov yo‘q. Kimdir binongizni sotib olmoqchi bo‘lsa, shu yerda ko‘rinadi va 📨 xabar keladi.</small>')+`</div>`+(()=>{const my=reqs.filter(r=>r.from===uid&&bs[r.b]);return my.length?`<div class="card"><h3>Mening so‘rovlarim</h3>`+my.map(r=>`<div class="row"><span>${esc(bname(bs[r.b]))}<br><small>⏳ egasi javobini kutyapsiz · ${tgl((players[bs[r.b].owner]||{}).tg)}</small></span><button class="g" onclick="cancelReq('${r.id}')">Bekor qilish</button></div>`).join('')+`</div>`:''})()+`
