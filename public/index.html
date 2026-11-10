@@ -99,6 +99,29 @@ const tgl=t=>t?`<a href="https://t.me/${esc(String(t).replace('@',''))}" target=
 const oname=b=>(players[b.owner]||{}).name||'?';
 const bname=b=>b.label?String(b.label):((players[b.owner]||{}).adm?'Baxu':oname(b))+' binosi';
 const mine=()=>Object.entries(bs).filter(([i,b])=>b.owner===uid);
+const WK=ms=>Math.floor((ms+5*36e5+3*864e5)/(7*864e5)),WKEND=w=>(w+1)*7*864e5-3*864e5-5*36e5,WPR=[7000,5000,3000,1000];
+let rkT='w',prB=0;
+function wkInc(){const w=WK(Date.now()),o=me.wk,f=o&&o.w===w?(o.f||0)+1:1,r={wk:{w,f,t:Date.now()}};if(o&&o.w<w)r.wp=o;return r}
+function wkOf(p,w){if(p.wk&&p.wk.w===w)return p.wk;if(p.wp&&p.wp.w===w)return p.wp;return{w,f:0,t:0}}
+function wkList(w){return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0}}).sort((a,b)=>b.f-a.f||a.t-b.t||(a.i<b.i?-1:1))}
+function wkHtml(w){
+ const L=wkList(w),mi=L.findIndex(x=>x.i===uid),mf=mi>=0?L[mi].f:0,left=Math.max(0,WKEND(w)-Date.now()),dd=Math.floor(left/864e5),hh=Math.floor(left%864e5/36e5),mm=Math.floor(left%36e5/6e4),
+ tl=dd?dd+' kun '+hh+' soat':hh?hh+' soat '+mm+' daqiqa':mm+' daqiqa',MD=['🥇','🥈','🥉'],cs='background:rgba(255,255,255,.92);color:#4a2a8a;border-radius:14px;padding:6px 12px;font-weight:800;font-size:14px';
+ let o=`<div style="border-radius:24px;padding:18px;background:linear-gradient(135deg,#7c4dff,#d946ef 70%,#ec4899);color:#fff;box-shadow:0 6px 0 #5b2fb8"><div style="display:flex;gap:12px;align-items:center"><div style="font-size:46px">🏆</div><div><div style="font-size:22px;font-weight:900">Bu hafta g‘olib kim?</div><div style="opacity:.92;font-size:14px">Faqat shu hafta hisoblanadi — hamma teng</div></div></div>
+ <div style="display:inline-block;margin-top:12px;background:rgba(255,255,255,.22);border-radius:16px;padding:8px 14px;font-weight:800">⏳ Tugashiga ${tl}</div>
+ <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${MD.map((m,i)=>`<span style="${cs}">${m} ${fmt(WPR[i])}</span>`).join('')}<span style="${cs}">4: ${fmt(WPR[3])}</span></div></div>`;
+ o+=`<div style="text-align:center;margin:10px 0 4px;opacity:.75;font-size:14px">Shu hafta qurilgan qavatlar</div>`;
+ if(mi>=0){const need=L[3]?Math.max(1,L[3].f-mf+1):1;o+=`<div style="border:2px dashed var(--pr);border-radius:20px;padding:14px 16px;margin:8px 0;display:flex;gap:12px;align-items:center"><div style="font-size:34px">🎯</div><div><b style="font-size:18px">Siz: ${mi+1}-o‘rin · ${mf} qavat</b><br><span style="color:var(--pr);font-weight:700">${mi<4?'Sovrinli o‘rindasiz! 🎉':'4-o‘ringacha '+need+' qavat qoldi'}</span></div></div>`}
+ const top=L.filter(x=>x.f>0).slice(0,50);
+ o+=`<div class="card" style="margin-top:8px">`+(top.map((x,i)=>`<div class="row" style="cursor:pointer;${x.i===uid?'background:rgba(30,136,229,.14);border-radius:12px;padding:6px':''}" onclick="goB('${x.i}')"><span style="display:flex;gap:10px;align-items:center"><b style="min-width:30px;font-size:${i<3?24:16}px;text-align:center">${MD[i]||i+1}</b><span><b>${esc(x.p.name||'?')}${x.i===uid?' (siz)':''}</b>${x.p.tg?'<br><small class="mu">@'+esc(x.p.tg)+'</small>':''}</span></span><span style="text-align:right"><b style="font-size:18px">${x.f}</b> <small>qavat</small>${i<4?`<br><span class="tag">🪙 ${fmt(WPR[i])}</span>`:''}</span></div>`).join('')||'<small class="mu">Bu hafta hali hech kim qavat qurmagan. Birinchi bo‘ling! 🏗️</small>')+`</div>`;
+ return o}
+function prizeChk(){
+ if(prB||!me||me.blocked||me.adm||typeof rp==='undefined'||!rp)return;const W=WK(Date.now())-1;if(me.pz===W)return;
+ const L=wkList(W).filter(x=>x.f>0).slice(0,4),i=L.findIndex(x=>x.i===uid);if(i<0)return;prB=1;const pr=WPR[i],f=L[i].f;
+ const d=document.createElement('div');d.id='prize';d.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(5,10,30,.82);display:flex;align-items:center;justify-content:center;padding:20px';
+ d.innerHTML='<div style="text-align:center;color:#fff;max-width:340px"><div style="font-size:24px;font-weight:900;margin-bottom:6px">Haftalik turnir! 🏆</div><div style="opacity:.92;margin-bottom:14px">O‘tgan hafta siz <b>'+(i+1)+'-o‘rin</b> oldingiz ('+f+' qavat)</div><div style="font-size:120px;line-height:1">'+['🥇','🥈','🥉','🏅'][i]+'</div><div style="font-size:34px;font-weight:900;color:#ffd23f;margin:12px 0">+'+fmt(pr)+' coin</div><button id="przok" style="padding:13px 34px;border:0;border-radius:14px;background:#2ea44f;color:#fff;font-size:18px;font-weight:800">Sovrinni olish</button></div>';
+ document.body.appendChild(d);$('#przok').onclick=()=>{if(me.pz===W){d.remove();return}upd({coins:(me.coins||0)+pr,pz:W});d.remove();toast('🪙 +'+fmt(pr)+' coin hisobingizga tushdi')}}
+
 let giftBusy=0;
 function giftChk(){if(giftBusy||!me||me.gf!==1||me.blocked)return;giftBusy=1;const d=document.createElement('div');d.id='gift';d.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(5,10,30,.78);display:flex;align-items:center;justify-content:center;padding:20px';
  d.innerHTML='<style>@keyframes gbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-14px) rotate(4deg)}}@keyframes gpop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}</style><div style="text-align:center;color:#fff;max-width:340px"><div style="font-size:22px;font-weight:800;margin-bottom:6px">Xush kelibsiz! 🎉</div><div style="opacity:.9;margin-bottom:18px">Yangi o‘yinchi sovg‘asi sizni kutmoqda</div><div id="gbox" style="font-size:130px;line-height:1;cursor:pointer;animation:gbob 1.2s ease-in-out infinite">🎁</div><div id="gtx" style="margin-top:18px;font-weight:700">Ochish uchun sovg‘ani bosing 👆</div></div>';
@@ -124,7 +147,7 @@ function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(isAdmin&&!me.adm){p.adm=true;p.name='Baxu'}
  if(isAdmin&&!me.ci&&bs[uid]){p.ci=1;col('b').doc(uid).update({ctr:true,sale:'200 000 so‘m'}).catch(()=>{})}
  if(Object.keys(p).length)col('players').doc(uid).update(p)}
-function buyF(id){const b=bs[id],c=price(b.floors,b.gold);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+1});upd({coins:me.coins-c,m:prog('floor')});toast('Yangi qavat! 🎉')}
+function buyF(id){const b=bs[id],c=price(b.floors,b.gold);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+1});upd({coins:me.coins-c,m:prog('floor'),...wkInc()});toast('Yangi qavat! 🎉')}
 const SG=5000,CAP=200,CG=3e3,CCAP=40,CRATE=[10,5,3];
 const srN=()=>me&&me.sr&&me.sr.d===today()?me.sr.n:0;
 const stored=()=>me&&me.st?Math.min(CAP,Math.floor((Date.now()-me.st)/SG)):0;
@@ -415,7 +438,7 @@ function build(){const T=THREE,A=e=>(e[1].ctr||(players[e[1].owner]||{}).adm)?1:
 
 
 function render(){
- giftChk();
+ giftChk();prizeChk();
  if(!(rp&&rb))return;
  if(document.activeElement&&document.activeElement.tagName==='INPUT'&&tab!=='chat')return;
  const hf=tab==='mine'&&me&&!me.blocked,mp=$('#map');if(hf&&!HALF&&posById[uid]){VS0={x:V.x,z:V.z,d:V.d,yaw:V.yaw,pitch:V.pitch};V.x=posById[uid][0];V.z=posById[uid][1];V.pitch=.5;if(sc)cam()}else if(!hf&&HALF&&VS0){Object.assign(V,VS0);VS0=null;if(sc)cam()}HALF=hf&&posById[uid]?1:0;if(HALF){const h=(LTOP[uid]||(4.7+((bs[uid]||{}).floors||1)*1.4+6))+6;HY=h*.5;V.d=Math.min(150,h*1.1+20);if(sc)cam()}else HY=0;mp.classList.toggle('half',!!hf);mp.classList.toggle('fs',fsOn&&!hf);document.body.style.overflow=(fsOn&&!hf)?'hidden':'';mp.style.display=((tab==='city'||hf)&&me)?'block':'none';const fc=$('#fsc');if(fc)fc.innerHTML=(fsOn&&me&&sel&&bs[sel])?bcard(sel):'';mp.classList.toggle('hc',!!(fc&&fc.innerHTML));if(sc&&(tab==='city'||hf)&&me){if(!fsInit&&tab==='city'){fsInit=1;if(!fsOn)fs()}rs();build();need=1;if(!hashDone&&Object.keys(posById).length){hashDone=1;applyHash(0)}}
@@ -450,7 +473,11 @@ function render(){
  }else if(tab==='lv'){h=lvView();
  }else if(tab==='inbox'){h=ibView();if(ib.some(x=>!x.read))setTimeout(readAll,700);
  }else if(tab==='top'){
-  h=`<div class="card"><h3>Reyting</h3><small>Ustini bossangiz, binosiga olib boradi 📍</small>`+Object.entries(tot).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).map(([o,f],i)=>`<div class="row" style="cursor:pointer" onclick="goB('${o}')"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc((players[o]||{}).name)}${o===uid?' (siz)':''}</span><b>${f} qavat · ❤️ ${LK[o]||0} · 👁 ${VS[o]||0}</b></div>`).join('')+`</div>`;
+  const w=WK(Date.now());
+  h=`<div class="row" style="gap:8px;margin-bottom:10px">${[['w','🏆 Haftalik turnir'],['u','📊 Umumiy']].map(([k,n])=>`<button class="${rkT===k?'':'g'}" style="flex:1;padding:12px 6px;font-weight:800" onclick="rkT='${k}';render()">${n}</button>`).join('')}</div>`;
+  if(rkT==='w')h+=wkHtml(w);else{
+  h+=`<div class="card"><h3>Reyting</h3><small>Ustini bossangiz, binosiga olib boradi 📍</small>`+Object.entries(tot).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).map(([o,f],i)=>`<div class="row" style="cursor:pointer" onclick="goB('${o}')"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc((players[o]||{}).name)}${o===uid?' (siz)':''}</span><b>${f} qavat · ❤️ ${LK[o]||0} · 👁 ${VS[o]||0}</b></div>`).join('')+`</div>`;
+  }
  }else if(tab==='chat'){
   SEEN('chat',Math.max(0,...chat.map(x=>x.ts||0)));
   h=`<div class="card"><h3>Umumiy chat</h3><div id="msgs">${chat.map(x=>`<div class="msg"><b style="cursor:pointer;text-decoration:underline" onclick="goB('${esc(x.uid||'')}')">${esc(x.name)}</b> ${esc(x.text)}</div>`).join('')||'<small>Hozircha xabar yo‘q</small>'}</div>${me.blocked?'<p class="mu">Siz bloklangansiz.</p>':`<div class="row"><input id="ci" maxlength="200" placeholder="Xabar yozing…" onkeydown="if(event.key==='Enter')send()"><button onclick="send()">➤</button></div>`}</div>`;
