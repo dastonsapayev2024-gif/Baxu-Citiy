@@ -103,7 +103,7 @@ const WK=ms=>Math.floor((ms+5*36e5+3*864e5)/(7*864e5)),WKEND=w=>(w+1)*7*864e5-3*
 let rkT='w',prB=0;
 function wkInc(){const w=WK(Date.now()),o=me.wk,f=o&&o.w===w?(o.f||0)+1:1,r={wk:{w,f,t:Date.now()}};if(o&&o.w<w)r.wp=o;return r}
 function wkOf(p,w){if(p.wk&&p.wk.w===w)return p.wk;if(p.wp&&p.wp.w===w)return p.wp;return{w,f:0,t:0}}
-function wkList(w,full){const tf={},lk={};if(full)Object.entries(bs).forEach(([i,b])=>{tf[b.owner]=(tf[b.owner]||0)+(b.floors||0);lk[b.owner]=(lk[b.owner]||0)+lc(i)});return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0,tf:tf[i]||0,lk:lk[i]||0}}).sort((a,b)=>b.f-a.f||(a.f?a.t-b.t:b.tf-a.tf)||(a.i<b.i?-1:1))}
+function wkList(w,full){const tf={},lk={};if(full)Object.entries(bs).forEach(([i,b])=>{tf[b.owner]=Math.max(tf[b.owner]||0,b.floors||0);lk[b.owner]=(lk[b.owner]||0)+lc(i)});return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0,tf:tf[i]||0,lk:lk[i]||0}}).sort((a,b)=>b.f-a.f||(a.f?a.t-b.t:b.tf-a.tf)||(a.i<b.i?-1:1))}
 function wkHtml(w){
  const L0=wkList(w,1),L=L0.slice().sort((a,b)=>b.tf-a.tf||b.f-a.f||(a.i<b.i?-1:1)),mi=L.findIndex(x=>x.i===uid),mf=mi>=0?L[mi].tf:0,left=Math.max(0,WKEND(w)-Date.now()),dd=Math.floor(left/864e5),hh=Math.floor(left%864e5/36e5),mm=Math.floor(left%36e5/6e4),
  tl=dd?dd+' kun '+hh+' soat':hh?hh+' soat '+mm+' daqiqa':mm+' daqiqa',MD=['🥇','🥈','🥉'],cs='background:rgba(255,255,255,.92);color:#4a2a8a;border-radius:14px;padding:6px 12px;font-weight:800;font-size:14px';
