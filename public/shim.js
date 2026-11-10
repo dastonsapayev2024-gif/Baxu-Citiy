@@ -121,8 +121,14 @@
   function tick() {
     sync();
     var d = fails ? Math.min(30000, 3000 * Math.pow(2, Math.min(fails, 4))) : (idle > 10 ? 6000 : 3000);
+    // Harakatsiz o'yinchi (60 s ekranga tegmagan, chat yopiq): so'rov orasi uzayadi
+    if (!fails && Date.now() - lastAct > 60000 && !chatOpen()) d = idle > 10 ? 20000 : 12000;
     timer = setTimeout(tick, d + Math.random() * 1000);
   }
+  var lastAct = Date.now();
+  function chatOpen() { try { return !!document.querySelector('#tq button[data-t="chat"].on'); } catch (e) { return false; } }
+  function act() { var was = Date.now() - lastAct > 60000; lastAct = Date.now(); if (was) kick(0); }
+  ['pointerdown', 'touchstart', 'keydown', 'wheel'].forEach(function (ev) { document.addEventListener(ev, act, { passive: true, capture: true }); });
   function start() { if (!timer) { timer = 1; tick(); } else kick(0); }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) kick(0); });
 
