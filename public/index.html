@@ -412,9 +412,9 @@ function tourRun(L){
  if(!TOUR)return;L=L.filter(x=>posById[x.o]);if(!L.length){tourStop();return toast('Binolar xaritada topilmadi')}
  const ov=document.createElement('div');ov.id='tourov';ov.innerHTML='<button id="tourx" onclick="tourStop()">✕</button><div id="tourc"></div>';document.body.appendChild(ov);document.body.classList.add('tour');
  const card=h=>{const c=$('#tourc');if(c)c.innerHTML=h},MD=['🥇','🥈','🥉','4️⃣'];
- const seq=[{k:'city',d:6}];L.forEach(x=>{seq.push({k:'fly',d:1,s:x});seq.push({k:'sweep',d:3,s:x})});seq.push({k:'wander',d:11});seq.push({k:'city',d:7});
+ const seq=[{k:'city',d:6}];L.forEach(x=>{seq.push({k:'fly',d:1,s:x});seq.push({k:'sweep',d:3,s:x})});seq.push({k:'city',d:7,hi:1});seq.push({k:'wander',d:14});
  const ks=Object.values(posById),cxm=ks.length?ks.reduce((a,p)=>a+p[0],0)/ks.length:0,zm=ks.length?ks.reduce((a,p)=>a+p[1],0)/ks.length:0,spr=ks.length?Math.max(...ks.map(p=>Math.abs(p[0]-cxm))):60,amp=Math.max(25,Math.min(95,spr*.55));
- const mt=Math.max(24,...L.map(x=>LTOP[x.o]||24)),tg=sg=>{if(sg.k==='wander')return{x:cxm,z:zm,d:Math.max(56,mt*.95+30),pitch:.85,h:mt*.5};if(!sg.s)return{x:0,z:0,d:200,pitch:.6,h:12};const P=posById[sg.s.o],t=LTOP[sg.s.o]||24,d=Math.max(48,t*.9+26);return{x:P[0],z:P[1],d:Math.max(56,t*.95+30),pitch:.85,h:t*.5}};
+ const mt=Math.max(24,...L.map(x=>LTOP[x.o]||24)),tg=sg=>{if(sg.k==='wander')return{x:cxm,z:zm,d:Math.max(56,mt*.95+30),pitch:.85,h:mt*.5};if(!sg.s)return sg.hi?{x:0,z:0,d:300,pitch:.8,h:14}:{x:0,z:0,d:200,pitch:.6,h:12};const P=posById[sg.s.o],t=LTOP[sg.s.o]||24,d=Math.max(48,t*.9+26);return{x:P[0],z:P[1],d:Math.max(56,t*.95+30),pitch:.85,h:t*.5}};
  V.h=0;let si=-1,t0=0,fr=null,last=performance.now(),to=null,wy=0;
  const step=now=>{if(!TOUR)return;const dt=Math.min(.05,(now-last)/1000);last=now;
   if(si<0||now-t0>=seq[si].d*1000){si++;if(si>=seq.length){tourStop();return}t0=now;const sg=seq[si];fr={x:V.x,z:V.z,d:V.d,pitch:V.pitch,h:V.h||0};to=tg(sg);if(sg.k==='wander')wy=V.yaw;
