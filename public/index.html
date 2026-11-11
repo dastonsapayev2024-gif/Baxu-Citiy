@@ -108,7 +108,7 @@ const WK=ms=>Math.floor((ms+5*36e5+3*864e5)/(7*864e5)),WKEND=w=>(w+1)*7*864e5-3*
 let rkT='w',prB=0;
 function wkInc(){const w=WK(Date.now()),o=me.wk,f=o&&o.w===w?(o.f||0)+1:1,r={wk:{w,f,t:Date.now()}};if(o&&o.w<w)r.wp=o;return r}
 function wkOf(p,w){if(p.wk&&p.wk.w===w)return p.wk;if(p.wp&&p.wp.w===w)return p.wp;return{w,f:0,t:0}}
-function wkList(w,full){const tf={},lk={};if(full)Object.entries(bs).filter(x=>rkOK(x)).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tf[b.owner]!=null)return;tf[b.owner]=b.floors||0;lk[b.owner]=lc(i)});return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0,tf:tf[i]||0,lk:lk[i]||0}}).sort((a,b)=>b.f-a.f||(a.f?a.t-b.t:b.tf-a.tf)||(a.i<b.i?-1:1))}
+function wkList(w,full){const tf={},lk={},bi={};if(full)Object.entries(bs).filter(x=>rkOK(x)).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tf[b.owner]!=null)return;tf[b.owner]=b.floors||0;bi[b.owner]=i;lk[b.owner]=lc(i)});return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0,tf:tf[i]||0,bi:bi[i]||i,lk:lk[i]||0}}).sort((a,b)=>b.f-a.f||(a.f?a.t-b.t:b.tf-a.tf)||(a.i<b.i?-1:1))}
 function wkHtml(w){
  const L0=wkList(w,1),L=L0.slice().sort((a,b)=>b.tf-a.tf||b.f-a.f||(a.i<b.i?-1:1)),mi=L.findIndex(x=>x.i===uid),mf=mi>=0?L[mi].tf:0,left=Math.max(0,WKEND(w)-Date.now()),dd=Math.floor(left/864e5),hh=Math.floor(left%864e5/36e5),mm=Math.floor(left%36e5/6e4),
  tl=dd?dd+' kun '+hh+' soat':hh?hh+' soat '+mm+' daqiqa':mm+' daqiqa',MD=['🥇','🥈','🥉'],cs='background:rgba(255,255,255,.92);color:#4a2a8a;border-radius:14px;padding:6px 12px;font-weight:800;font-size:14px';
@@ -118,7 +118,7 @@ function wkHtml(w){
  o+=`<div style="text-align:center;margin:10px 0 4px;opacity:.75;font-size:14px">O‘yin boshidan qurilgan jami qavatlar</div>`;
  if(mi>=0){const need=L[3]?Math.max(1,L[3].tf-mf+1):1;o+=`<div style="border:2px dashed var(--pr);border-radius:20px;padding:14px 16px;margin:8px 0;display:flex;gap:12px;align-items:center"><div style="font-size:34px">🎯</div><div><b style="font-size:18px">Siz: ${mi+1}-o‘rin · ${mf} qavat</b><br><span style="color:var(--pr);font-weight:700">${mi<4?'Birinchi to‘rtlikdasiz! 🎉':'4-o‘ringacha '+need+' qavat qoldi'} · bu hafta +${L[mi].f}</span></span></div></div>`}
  const top=L.slice(0,30);
- o+=`<div class="card" style="margin-top:8px">`+(top.map((x,i)=>`<div class="row" style="cursor:pointer;${x.i===uid?'background:rgba(30,136,229,.14);border-radius:12px;padding:6px':''}" onclick="goB('${x.i}')"><span style="display:flex;gap:10px;align-items:center"><b style="min-width:30px;font-size:${i<3?24:16}px;text-align:center">${MD[i]||i+1}</b><span><b>${esc(x.p.name||'?')}${x.i===uid?' (siz)':''}</b>${x.p.tg?'<br><small class="mu">@'+esc(x.p.tg)+'</small>':''}${x.f>0?`<br><span class="tag">bu hafta +${x.f}</span>`:''}</span></span><span style="text-align:right"><b style="font-size:18px">${x.tf}</b> <small>qavat</small><br><small>❤️ ${x.lk}</small></span></div>`).join('')||'<small class="mu">O‘yinchilar yo‘q</small>')+`</div>`;
+ o+=`<div class="card" style="margin-top:8px">`+(top.map((x,i)=>`<div class="row" style="cursor:pointer;${x.i===uid?'background:rgba(30,136,229,.14);border-radius:12px;padding:6px':''}" onclick="goB('${x.bi||x.i}')"><span style="display:flex;gap:10px;align-items:center"><b style="min-width:30px;font-size:${i<3?24:16}px;text-align:center">${MD[i]||i+1}</b><span><b>${esc(x.p.name||'?')}${x.i===uid?' (siz)':''}</b>${x.p.tg?'<br><small class="mu">@'+esc(x.p.tg)+'</small>':''}${x.f>0?`<br><span class="tag">bu hafta +${x.f}</span>`:''}</span></span><span style="text-align:right"><b style="font-size:18px">${x.tf}</b> <small>qavat</small><br><small>❤️ ${x.lk}</small></span></div>`).join('')||'<small class="mu">O‘yinchilar yo‘q</small>')+`</div>`;
  return o}
 function prizeChk(){
  if(prB||!me||me.blocked||me.adm||typeof rp==='undefined'||!rp)return;const W=WK(Date.now())-1;if(me.pz===W)return;
@@ -425,8 +425,8 @@ function cam(){V.d=Math.min(600,Math.max(14,V.d));V.pitch=Math.min(1.45,Math.max
 let TOUR=0,TRAF=0;
 function tourStart(rev){
  if(TOUR)return;
- const tt={},lkk={},vv={};Object.entries(bs).filter(x=>rkOK(x)).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tt[b.owner]!=null)return;tt[b.owner]=b.floors||0;lkk[b.owner]=lc(i);vv[b.owner]=vc(i)});
- let L=Object.entries(tt).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([o,f],i)=>({o,f,r:i+1,l:lkk[o]||0,v:vv[o]||0}));
+ const tt={},lkk={},vv={},bi={};Object.entries(bs).filter(x=>rkOK(x)).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tt[b.owner]!=null)return;tt[b.owner]=b.floors||0;bi[b.owner]=i;lkk[b.owner]=lc(i);vv[b.owner]=vc(i)});
+ let L=Object.entries(tt).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([o,f],i)=>({o:bi[o]||o,f,r:i+1,l:lkk[o]||0,v:vv[o]||0}));
  if(!L.length)return toast('Reyting bo‘sh');
  if(rev)L.reverse();
  TOUR=1;tab='city';sel=null;if(!fsOn)fs();else render();
@@ -442,7 +442,7 @@ function tourRun(L){
  V.h=0;let si=-1,t0=0,fr=null,last=performance.now(),to=null,wy=0;
  const step=now=>{if(!TOUR)return;const dt=Math.min(.05,(now-last)/1000);last=now;
   if(si<0||now-t0>=seq[si].d*1000){si++;if(si>=seq.length){tourStop();return}t0=now;const sg=seq[si];fr={x:V.x,z:V.z,d:V.d,pitch:V.pitch,h:V.h||0};to=tg(sg);if(sg.k==='wander')wy=V.yaw;
-   if(sg.k==='fly'){FOCID=sg.s.o;const b=bs[sg.s.o],nm=String((b&&b.label)||(players[sg.s.o]||{}).name||'?');card(`<div class="tc"><div class="tr">${MD[sg.s.r-1]||sg.s.r}</div><div class="tn">${sg.s.r}-o‘rin</div><div class="tb">${esc(nm)}</div></div>`)}
+   if(sg.k==='fly'){FOCID=sg.s.o;const b=bs[sg.s.o],nm=String((b&&b.label)||(players[(b||{}).owner||sg.s.o]||{}).name||'?');card(`<div class="tc"><div class="tr">${MD[sg.s.r-1]||sg.s.r}</div><div class="tn">${sg.s.r}-o‘rin</div><div class="tb">${esc(nm)}</div></div>`)}
    else if(sg.k==='city'||sg.k==='wander'){FOCID='';card('')}}
   const sg=seq[si],u=Math.min(1,(now-t0)/(sg.d*1000)),eu=sg.k==='city'?Math.min(1,u*5):u,e=eu<.5?4*eu*eu*eu:1-Math.pow(-2*eu+2,3)/2,m=(a,b)=>a+(b-a)*e;
   V.yaw+=dt*(sg.k==='city'?.15:sg.k==='wander'?0:sg.k==='sweep'?.3:.22);V.x=m(fr.x,to.x);V.z=m(fr.z,to.z);if(sg.k==='wander'){const b=Math.min(1,u*4),R=Math.max(40,spr)*.95,k=R*(1-1.9*u),px=cxm+Math.sin(wy)*k,pz=zm+Math.cos(wy)*k;V.x=V.x*(1-b)+px*b;V.z=V.z*(1-b)+pz*b;}V.pitch=m(fr.pitch,to.pitch);V.h=m(fr.h,to.h);V.d=m(fr.d,to.d);
@@ -528,7 +528,7 @@ function render(){
  const ub=ib.filter(x=>!x.read).length;$('#tq').innerHTML=`<button class="${tab==='inbox'?'on':''}" onclick="go('inbox')">📨${ub?'<i>'+ub+'</i>':''}</button><button data-t="chat" class="${tab==='chat'?'on':''}" onclick="go('chat')">💬</button>`;
  $('#nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
  $('#bal').textContent='🪙 '+fmt(me.coins);{const fb=$('#fsb');if(fb)fb.textContent='🪙 '+fmt(me.coins)};tickC();
- const es=Object.entries(bs),tot={},LK={},VS={};es.filter(x=>rkOK(x)).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tot[b.owner]!=null)return;tot[b.owner]=b.floors||0;LK[b.owner]=lc(i);VS[b.owner]=vc(i)});
+ const es=Object.entries(bs),tot={},LK={},VS={},BID={};es.filter(x=>rkOK(x)).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tot[b.owner]!=null)return;tot[b.owner]=b.floors||0;BID[b.owner]=i;LK[b.owner]=lc(i);VS[b.owner]=vc(i)});
  let h='';
  if(tab==='city'){
   h=`<small>1 barmoq — surish, 2 barmoq — kattalashtirish va aylantirish. Markazda ★ Baxu.</small>`;
@@ -553,7 +553,7 @@ function render(){
   const w=WK(Date.now());
   h=`<div class="row" style="gap:8px;margin-bottom:10px">${[['w','🏆 Haftalik turnir'],['u','📊 Umumiy']].map(([k,n])=>`<button class="${rkT===k?'':'g'}" style="flex:1;padding:12px 6px;font-weight:800" onclick="rkT='${k}';render()">${n}</button>`).join('')}</div>`;
   if(rkT==='w')h+=wkHtml(w);else{
-  h+=`<div class="card"><h3>Reyting</h3><small>Ustini bossangiz, binosiga olib boradi 📍</small>`+Object.entries(tot).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).map(([o,f],i)=>`<div class="row" style="cursor:pointer" onclick="goB('${o}')"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc((players[o]||{}).name)}${o===uid?' (siz)':''}</span><b>${f} qavat · ❤️ ${LK[o]||0} · 👁 ${VS[o]||0}</b></div>`).join('')+`</div>`;
+  h+=`<div class="card"><h3>Reyting</h3><small>Ustini bossangiz, binosiga olib boradi 📍</small>`+Object.entries(tot).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).map(([o,f],i)=>`<div class="row" style="cursor:pointer" onclick="goB('${BID[o]||o}')"><span>${['🥇','🥈','🥉'][i]||i+1+'.'} ${esc((players[o]||{}).name)}${o===uid?' (siz)':''}</span><b>${f} qavat · ❤️ ${LK[o]||0} · 👁 ${VS[o]||0}</b></div>`).join('')+`</div>`;
   }
  }else if(tab==='chat'){
   SEEN('chat',Math.max(0,...chat.map(x=>x.ts||0)));
