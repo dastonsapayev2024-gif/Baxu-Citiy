@@ -248,8 +248,8 @@ module.exports = async (req, res) => {
           if ((bd.floors || 0) <= 1) return bye('Bino 1 qavatgacha qolgan, buzib bo‘lmaydi');
           const vp = await cl.query("select data from docs where col='players' and id=$1", [victim]);
           if (!vp.rows[0] || vp.rows[0].data.adm) return bye('Bu binoni buzib bo‘lmaydi');
-          const c1 = await cl.query("select count(*)::int n from docs where col='bz' and data->>'b'=$1 and data->>'day'=$2 and data->>'by'=$3", [bid, day, a.uid]);
-          if (c1.rows[0].n >= L.BZ_PER_B) return bye('Bu binoni bugun ' + L.BZ_PER_B + ' marta buzgansiz, ertaga yana');
+          const c1 = await cl.query("select count(*)::int n from docs where col='bz' and data->>'b'=$1 and data->>'day'=$2", [bid, day]);
+          if (c1.rows[0].n >= L.BZ_PER_B) return bye('Bu bino bugun ' + L.BZ_PER_B + ' marta buzilgan, boshqa buzib bo‘lmaydi');
           const c2 = await cl.query("select count(*)::int n from docs where col='bz' and data->>'by'=$1 and data->>'day'=$2", [a.uid, day]);
           if (c2.rows[0].n >= L.BZ_DAILY) return bye('Bugungi limit (' + L.BZ_DAILY + ' qavat) tugagan');
           const ap = await cl.query("select data from docs where col='players' and id=$1 for update", [a.uid]);
