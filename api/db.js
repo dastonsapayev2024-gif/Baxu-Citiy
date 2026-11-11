@@ -4,7 +4,7 @@ const L = require('../lib/server');
 
 const bad = (res, code, msg) => res.status(code).json({ error: msg });
 // ---- Telegram bildirishnoma (inbox -> botdan xabar) ----
-const ICON = { like: '❤️', coin: '🪙', buy: '🛒', deal: '🎉', no: '❌' };
+const ICON = { like: '❤️', coin: '🪙', buy: '🛒', deal: '🎉', no: '❌', bz: '💥' };
 const esc = t => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 async function pushTg(pool, nd) {
   try {
@@ -113,6 +113,8 @@ async function cleanOld(pool) {
     if (r.rowCount) ch = 1;
     const ra = await pool.query("delete from docs where col='aid' and updated<$1", [Date.now() - 3 * 864e5]);
     if (ra.rowCount) ch = 1;
+    const rz = await pool.query("delete from docs where col='bz' and updated<$1", [Date.now() - 3 * 864e5]);
+    if (rz.rowCount) ch = 1;
     const q = await pool.query("select b.id, b.data bd from docs b join docs p on p.col='players' and p.id=b.data->>'owner' where b.col='b' and b.id=b.data->>'owner' and coalesce((b.data->>'ctr')::boolean,false)=false and coalesce((p.data->>'adm')::boolean,false)=false and coalesce((p.data->>'blocked')::boolean,false)=false and greatest(coalesce((p.data->>'seen')::bigint,0), p.updated) < $1 limit 50", [Date.now() - IDLE_TTL]);
     for (const row of q.rows) {
       // bino nusxasi o'yinchi hujjatiga saqlanadi: qaytib kirsa tiklanadi
@@ -153,7 +155,7 @@ module.exports = async (req, res) => {
       rws.forEach(x => { cur[x.col] = { v: Number(x.v), n: x.n }; });
       const out = {};
       // Faqat o'zgargan bo'limlar; ommaviy bo'limlarda faqat o'zgargan hujjatlar (delta)
-      const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals', 'aid'];
+      const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals', 'aid', 'bz'];
       const RESTR = { inbox: "data->>'to'=$2", orders: "data->>'uid'=$2", cq: "data->>'uid'=$2", reqs: "(data->>'from'=$2 or data->>'to'=$2)" };
       for (const c of cols) {
         const k = cur[c] || { v: 0, n: 0 };
@@ -231,7 +233,40 @@ module.exports = async (req, res) => {
           }
           mayorOk = true;
         }
-        if (!mayorOk && !L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
+        // Bino buzish: 1000 coin evaziga boshqa o'yinchi binosidan 1 qavat (server hammasini tekshiradi)
+        let bzOk = false;
+        if (col === 'bz' && !a.admin) {
+          const bye = async m => { await cl.query('rollback'); return bad(res, 403, m); };
+          if (b.op !== 'add' || typeof patch.b !== 'string' || patch.b.length > 128) return bye('Ruxsat yo‘q');
+          const bid = patch.b, day = L.hday();
+          const rb = await cl.query("select data from docs where col='b' and id=$1 for update", [bid]);
+          const bd = rb.rows[0] && rb.rows[0].data;
+          if (!bd) return bye('Bino topilmadi');
+          const victim = bd.owner;
+          if (!victim || victim === a.uid) return bye('O‘z binongizni buzib bo‘lmaydi');
+          if (bd.ctr) return bye('Bu binoni buzib bo‘lmaydi');
+          if ((bd.floors || 0) <= 1) return bye('Bino 1 qavatgacha qolgan, buzib bo‘lmaydi');
+          const vp = await cl.query("select data from docs where col='players' and id=$1", [victim]);
+          if (!vp.rows[0] || vp.rows[0].data.adm) return bye('Bu binoni buzib bo‘lmaydi');
+          const c1 = await cl.query("select count(*)::int n from docs where col='bz' and data->>'b'=$1 and data->>'day'=$2", [bid, day]);
+          if (c1.rows[0].n >= L.BZ_PER_B) return bye('Bu bino bugun ' + L.BZ_PER_B + ' marta buzilgan, ertaga yana');
+          const c2 = await cl.query("select count(*)::int n from docs where col='bz' and data->>'by'=$1 and data->>'day'=$2", [a.uid, day]);
+          if (c2.rows[0].n >= L.BZ_DAILY) return bye('Bugungi limit (' + L.BZ_DAILY + ' qavat) tugagan');
+          const ap = await cl.query("select data from docs where col='players' and id=$1 for update", [a.uid]);
+          const pd = ap.rows[0] && ap.rows[0].data;
+          if (!pd || pd.blocked) return bye('Ruxsat yo‘q');
+          if ((pd.coins || 0) < L.BZ_COST) return bye('Coin yetarli emas: kerak ' + L.BZ_COST);
+          const now2 = Date.now(), nf = (bd.floors || 0) - 1, after = pd.coins - L.BZ_COST;
+          await cl.query("update docs set data=$1, updated=$2 where col='b' and id=$3", [JSON.stringify(Object.assign({}, bd, { floors: nf })), now2, bid]);
+          await cl.query("update docs set data=$1, updated=$2 where col='players' and id=$3", [JSON.stringify(Object.assign({}, pd, { coins: after })), now2, a.uid]);
+          await cl.query("insert into docs(col,id,data,updated) values('ledger',$1,$2,$3)", [crypto.randomBytes(10).toString('hex'), JSON.stringify({ ts: now2, type: 'bz', uid: a.uid, name: pd.name || '?', delta: -L.BZ_COST, after, ref: 'buzish:' + bid, by: 'server' }), now2]);
+          const msg = (pd.name || 'O‘yinchi') + ' binongizning 1 qavatini buzdi (endi ' + nf + ' qavat)';
+          const ib = { to: victim, from: a.uid, fromName: pd.name || 'O‘yinchi', fromTg: pd.tg || '', type: 'bz', text: msg, coins: 0, ts: now2, read: false };
+          await cl.query("insert into docs(col,id,data,updated) values('inbox',$1,$2,$3)", [crypto.randomBytes(10).toString('hex'), JSON.stringify(ib), now2]);
+          nd = { b: bid, t: victim, by: a.uid, day, ts: now2, f: nf };
+          pushNd = ib; bzOk = true;
+        }
+        if (!mayorOk && !bzOk && !L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
         if (!a.admin && col === 'players' && id === a.uid && b.op !== 'delete' && old && patch && patch.coins !== undefined) {
           const why = L.cheat(old, nd);
           if (why) {
