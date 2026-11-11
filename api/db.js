@@ -286,9 +286,13 @@ module.exports = async (req, res) => {
         else await cl.query(
           'insert into docs(col,id,data,updated) values($1,$2,$3,$4) on conflict(col,id) do update set data=excluded.data,updated=excluded.updated',
           [col, id, JSON.stringify(nd), Date.now()]);
-        // Bino sotib olinganda xaridorning avvalgi binosi(lari) yo'qoladi: faqat sotib olingan bino qoladi
+        // Bino sotib olinganda xaridorning avvalgi binosi(lari) sotuvchiga o'tadi (almashinuv); faqat sotib olingan bino xaridorda qoladi
         if (col === 'b' && b.op !== 'delete' && old && nd && nd.owner && old.owner !== nd.owner && !nd.ctr) {
-          await cl.query("delete from docs where col='b' and id<>$1 and data->>'owner'=$2 and coalesce((data->>'ctr')::boolean,false)=false", [id, String(nd.owner)]);
+          if (typeof old.owner === 'string' && !old.ctr) {
+            await cl.query("update docs set data=jsonb_set(jsonb_set(data,'{owner}',to_jsonb($3::text)),'{sale}','\"\"'::jsonb), updated=$4 where col='b' and id<>$1 and data->>'owner'=$2 and coalesce((data->>'ctr')::boolean,false)=false", [id, String(nd.owner), old.owner, Date.now()]);
+          } else {
+            await cl.query("delete from docs where col='b' and id<>$1 and data->>'owner'=$2 and coalesce((data->>'ctr')::boolean,false)=false", [id, String(nd.owner)]);
+          }
           // Sotuvchi binosiz qolmasin: unga yangi 1 qavatli bino beriladi
           if (typeof old.owner === 'string' && !old.ctr) {
             const left = await cl.query("select count(*)::int n from docs where col='b' and data->>'owner'=$1", [old.owner]);
