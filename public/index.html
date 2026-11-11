@@ -108,7 +108,7 @@ const WK=ms=>Math.floor((ms+5*36e5+3*864e5)/(7*864e5)),WKEND=w=>(w+1)*7*864e5-3*
 let rkT='w',prB=0;
 function wkInc(){const w=WK(Date.now()),o=me.wk,f=o&&o.w===w?(o.f||0)+1:1,r={wk:{w,f,t:Date.now()}};if(o&&o.w<w)r.wp=o;return r}
 function wkOf(p,w){if(p.wk&&p.wk.w===w)return p.wk;if(p.wp&&p.wp.w===w)return p.wp;return{w,f:0,t:0}}
-function wkList(w,full){const tf={},lk={};if(full)Object.entries(bs).forEach(([i,b])=>{tf[b.owner]=Math.max(tf[b.owner]||0,b.floors||0);lk[b.owner]=(lk[b.owner]||0)+lc(i)});return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0,tf:tf[i]||0,lk:lk[i]||0}}).sort((a,b)=>b.f-a.f||(a.f?a.t-b.t:b.tf-a.tf)||(a.i<b.i?-1:1))}
+function wkList(w,full){const tf={},lk={};if(full)Object.entries(bs).filter(x=>rkOK(x[1])).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tf[b.owner]!=null)return;tf[b.owner]=b.floors||0;lk[b.owner]=lc(i)});return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0,tf:tf[i]||0,lk:lk[i]||0}}).sort((a,b)=>b.f-a.f||(a.f?a.t-b.t:b.tf-a.tf)||(a.i<b.i?-1:1))}
 function wkHtml(w){
  const L0=wkList(w,1),L=L0.slice().sort((a,b)=>b.tf-a.tf||b.f-a.f||(a.i<b.i?-1:1)),mi=L.findIndex(x=>x.i===uid),mf=mi>=0?L[mi].tf:0,left=Math.max(0,WKEND(w)-Date.now()),dd=Math.floor(left/864e5),hh=Math.floor(left%864e5/36e5),mm=Math.floor(left%36e5/6e4),
  tl=dd?dd+' kun '+hh+' soat':hh?hh+' soat '+mm+' daqiqa':mm+' daqiqa',MD=['🥇','🥈','🥉'],cs='background:rgba(255,255,255,.92);color:#4a2a8a;border-radius:14px;padding:6px 12px;font-weight:800;font-size:14px';
@@ -175,7 +175,8 @@ function notify(to,type,text,coins){col('inbox').add({to,from:uid,fromName:me.na
 function help(o){const h=me.hc&&me.hc.day===today()?me.hc.n:0;if(h>=HLIM)return toast('Bugun '+HLIM+' ta yordam berdingiz. Ertaga yana');if(me.coins<GIFT)return toast('Coin yetarli emas');const t=players[o];if(!t||o===uid)return;const hr=t.hr&&t.hr.d===today()?t.hr.n:0;if(hr>=HLIM)return toast('Bu o‘yinchi bugun '+HLIM+' ta yordam oldi, boshqasiga bering');
  col('players').doc(o).update({coins:t.coins+GIFT,hr:{d:today(),n:hr+1}}).catch(e=>toast(e&&e.message||'Yuborilmadi'));notify(o,'coin',me.name+' sizga '+GIFT+' coin berdi',GIFT);upd({coins:me.coins-GIFT,hc:{day:today(),n:h+1},m:prog('help')});toast(GIFT+' coin yuborildi')}
 const lday=x=>x.d||dkey(x.ts||0),lc=id=>lk.filter(x=>x.b===id).reduce((n,x)=>n+(x.n||1),0),iL=id=>{const x=lk.find(x=>x.id===id+'_'+uid);return !!x&&lday(x)===today()},likeToday=()=>lk.filter(x=>x.uid===uid&&x.b&&lday(x)===today()).length,vc=id=>lk.reduce((n,x)=>n+((x.vv&&x.v&&x.v[id])?x.v[id][0]:0),0);
-const rankOf=id=>{const l=Object.entries(bs).sort((a,b)=>(b[1].floors||0)-(a[1].floors||0)||(a[1].ts||0)-(b[1].ts||0));const i=l.findIndex(x=>x[0]===id);return i<0?0:i+1};
+const rkOK=b=>!b.ctr&&!(players[b.owner]||{}).adm;
+const rankOf=id=>{const l=Object.entries(bs).filter(x=>rkOK(x[1])).sort((a,b)=>(b[1].floors||0)-(a[1].floors||0)||(a[1].ts||0)-(b[1].ts||0));const i=l.findIndex(x=>x[0]===id);return i<0?0:i+1};
 const statsBox=id=>{const b=bs[id];if(!b)return'';const c=(t,l)=>`<div style="flex:1;text-align:center;padding:8px 2px;border-radius:12px;background:var(--bg)"><div style="font-size:20px;font-weight:800">${t}</div><small>${l}</small></div>`;return `<div style="display:flex;gap:6px;margin:8px 0">${c(b.floors,'qavat')}${c(lc(id),'layk')}${c(vc(id),'kirish')}${c('#'+rankOf(id),'balandlik')}</div>`};
 function toggleLike(id){const b=bs[id];if(!b||b.owner===uid)return toast('O‘z binongizga layk bosib bo‘lmaydi');if(iL(id))return toast('Bu binoga bugun layk bosgansiz. Ertaga yana mumkin');if(likeToday()>=LK_MAX)return toast('Bugungi '+LK_MAX+' ta layk limiti tugadi');
  const k=id+'_'+uid,old=lk.find(x=>x.id===k),n=(old?(old.n||1):0)+1,dd={b:id,uid,ts:Date.now(),d:today(),n};if(old)Object.assign(old,dd);else lk.push(Object.assign({id:k},dd));
@@ -424,7 +425,7 @@ function cam(){V.d=Math.min(600,Math.max(14,V.d));V.pitch=Math.min(1.45,Math.max
 let TOUR=0,TRAF=0;
 function tourStart(rev){
  if(TOUR)return;
- const tt={},lkk={},vv={};Object.entries(bs).forEach(([i,b])=>{tt[b.owner]=Math.max(tt[b.owner]||0,b.floors);lkk[b.owner]=(lkk[b.owner]||0)+lc(i);vv[b.owner]=(vv[b.owner]||0)+vc(i)});
+ const tt={},lkk={},vv={};Object.entries(bs).filter(x=>rkOK(x[1])).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tt[b.owner]!=null)return;tt[b.owner]=b.floors||0;lkk[b.owner]=lc(i);vv[b.owner]=vc(i)});
  let L=Object.entries(tt).filter(([o])=>!(players[o]||{}).blocked).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([o,f],i)=>({o,f,r:i+1,l:lkk[o]||0,v:vv[o]||0}));
  if(!L.length)return toast('Reyting bo‘sh');
  if(rev)L.reverse();
@@ -498,7 +499,7 @@ function build(){const T=THREE,A=e=>(e[1].ctr||(players[e[1].owner]||{}).adm)?1:
  gTex.repeat.set(2*H+1,2*H+1);
  const g1=new T.Mesh(new T.PlaneGeometry(S,S),new T.MeshLambertMaterial({map:gTex})),g2=new T.Mesh(new T.PlaneGeometry(S+8000,S+8000),new T.MeshLambertMaterial({color:0xa9d68f}));
  g1.rotation.x=g2.rotation.x=-Math.PI/2;g2.position.y=-.1;grp.add(g1,g2);
- TOPB=(Object.entries(bs).sort((a,b)=>(b[1].floors||0)-(a[1].floors||0)||(a[1].ts||0)-(b[1].ts||0))[0]||[])[0]||'';
+ TOPB=(Object.entries(bs).filter(x=>rkOK(x[1])).sort((a,b)=>(b[1].floors||0)-(a[1].floors||0)||(a[1].ts||0)-(b[1].ts||0))[0]||[])[0]||'';
  es.forEach(([id,b],i)=>mk(id,b,cells[i][0]*G,cells[i][1]*G));BKS=null;if(bankOn())mkBank();mkMayor();
  {const F=40,pm=new T.MeshLambertMaterial({color:0x8a5a2b}),rm=new T.MeshLambertMaterial({color:0xb07a3e}),P=[];for(let t=-F;t<=F;t+=3.5){P.push([t,-F],[t,F],[-F,t],[F,t])}
   const po=new T.InstancedMesh(new T.BoxGeometry(.7,3.2,.7),pm,P.length),dd=new T.Object3D();P.forEach(([x,z],i)=>{dd.position.set(x,1.6,z);dd.updateMatrix();po.setMatrixAt(i,dd.matrix)});grp.add(po);
@@ -527,7 +528,7 @@ function render(){
  const ub=ib.filter(x=>!x.read).length;$('#tq').innerHTML=`<button class="${tab==='inbox'?'on':''}" onclick="go('inbox')">📨${ub?'<i>'+ub+'</i>':''}</button><button data-t="chat" class="${tab==='chat'?'on':''}" onclick="go('chat')">💬</button>`;
  $('#nav').innerHTML=tabs.map(t=>`<button data-t="${t[0]}" class="${tab===t[0]?'on':''}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join('');
  $('#bal').textContent='🪙 '+fmt(me.coins);{const fb=$('#fsb');if(fb)fb.textContent='🪙 '+fmt(me.coins)};tickC();
- const es=Object.entries(bs),tot={},LK={},VS={};es.forEach(([i,b])=>{tot[b.owner]=(tot[b.owner]||0)+b.floors;LK[b.owner]=(LK[b.owner]||0)+lc(i);VS[b.owner]=(VS[b.owner]||0)+vc(i)});
+ const es=Object.entries(bs),tot={},LK={},VS={};es.filter(x=>rkOK(x[1])).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tot[b.owner]!=null)return;tot[b.owner]=b.floors||0;LK[b.owner]=lc(i);VS[b.owner]=vc(i)});
  let h='';
  if(tab==='city'){
   h=`<small>1 barmoq — surish, 2 barmoq — kattalashtirish va aylantirish. Markazda ★ Baxu.</small>`;
