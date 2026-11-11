@@ -119,7 +119,7 @@
   function kick(ms) { setTimeout(sync, ms || 0); }
   // Xato bo'lsa so'rovlar orasi uzayadi (server bosimini oshirmaslik uchun); tasodifiy qo'shimcha hamma bir vaqtda urilmasligi uchun
   function tick() {
-    sync();
+    if (!document.hidden) sync();
     var d = fails ? Math.min(30000, 3000 * Math.pow(2, Math.min(fails, 4))) : (idle > 10 ? 6000 : 3000);
     // Harakatsiz o'yinchi (60 s ekranga tegmagan, chat yopiq): so'rov orasi uzayadi
     if (!fails && Date.now() - lastAct > 60000 && !chatOpen()) d = idle > 10 ? 20000 : 12000;
