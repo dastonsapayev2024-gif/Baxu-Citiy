@@ -111,6 +111,8 @@ async function cleanOld(pool) {
     let ch = 0;
     const r = await pool.query("delete from docs where col='inbox' and updated<$1", [Date.now() - INBOX_TTL]);
     if (r.rowCount) ch = 1;
+    const ra = await pool.query("delete from docs where col='aid' and updated<$1", [Date.now() - 3 * 864e5]);
+    if (ra.rowCount) ch = 1;
     const q = await pool.query("select b.id, b.data bd from docs b join docs p on p.col='players' and p.id=b.data->>'owner' where b.col='b' and b.id=b.data->>'owner' and coalesce((b.data->>'ctr')::boolean,false)=false and coalesce((p.data->>'adm')::boolean,false)=false and coalesce((p.data->>'blocked')::boolean,false)=false and greatest(coalesce((p.data->>'seen')::bigint,0), p.updated) < $1 limit 50", [Date.now() - IDLE_TTL]);
     for (const row of q.rows) {
       // bino nusxasi o'yinchi hujjatiga saqlanadi: qaytib kirsa tiklanadi
@@ -151,7 +153,7 @@ module.exports = async (req, res) => {
       rws.forEach(x => { cur[x.col] = { v: Number(x.v), n: x.n }; });
       const out = {};
       // Faqat o'zgargan bo'limlar; ommaviy bo'limlarda faqat o'zgargan hujjatlar (delta)
-      const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals'];
+      const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals', 'aid'];
       const RESTR = { inbox: "data->>'to'=$2", orders: "data->>'uid'=$2", cq: "data->>'uid'=$2", reqs: "(data->>'from'=$2 or data->>'to'=$2)" };
       for (const c of cols) {
         const k = cur[c] || { v: 0, n: 0 };
@@ -200,7 +202,36 @@ module.exports = async (req, res) => {
         if (b.op === 'update') { if (!old) { await cl.query('rollback'); return bad(res, 404, 'Topilmadi'); } nd = Object.assign({}, old, patch); }
         else if (b.op !== 'delete') nd = patch;
         if (nd && JSON.stringify(nd).length > (col === 'orders' || col === 'reqs' ? 150000 : 30000)) { await cl.query('rollback'); return bad(res, 413, 'Juda katta'); }
-        if (!L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
+        // Hokim so'rovni tasdiqlaydi/rad etadi: faqat faol hokim, kuniga 10 ta, TOP-5 dan pastdagilarga 4000 coin (server tekshiradi)
+        let mayorOk = false;
+        if (col === 'aid' && !a.admin && old && b.op === 'update') {
+          const bye = async m => { await cl.query('rollback'); return bad(res, 403, m); };
+          const day = L.hday();
+          const keys = Object.keys(patch || {});
+          if (keys.length !== 1 || keys[0] !== 'st' || (patch.st !== 'ok' && patch.st !== 'no') || old.st !== 'p') return bye('Ruxsat yo‘q');
+          const cf = await cl.query("select data from docs where col='config' and id='main'");
+          const mc = cf.rows[0] && cf.rows[0].data && cf.rows[0].data.mayor;
+          if (!mc || mc.st !== 'active' || mc.id !== a.uid) return bye('Faqat hokim tasdiqlay oladi');
+          if (old.day !== day) return bye('So‘rov eskirgan');
+          if (patch.st === 'ok') {
+            const rid = old.uid;
+            if (rid === a.uid) return bye('O‘zingizga bera olmaysiz');
+            const rp = await cl.query("select data from docs where col='players' and id=$1 for update", [rid]);
+            const pd = rp.rows[0] && rp.rows[0].data;
+            if (!pd || pd.blocked || pd.adm) return bye('O‘yinchiga berib bo‘lmaydi');
+            const t5 = await cl.query("select id from docs where col='players' and coalesce(data->>'adm','false')<>'true' and coalesce(data->>'blocked','false')<>'true' order by coalesce((data->>'coins')::numeric,0) desc, id limit 5");
+            if (t5.rows.some(r => r.id === rid)) return bye('Coin bo‘yicha TOP-5 dagilarga berib bo‘lmaydi');
+            const cnt = await cl.query("select count(*)::int n from docs where col='aid' and data->>'day'=$1 and data->>'st'='ok' and data->>'by'=$2", [day, a.uid]);
+            if (cnt.rows[0].n >= L.MAYOR_DAILY) return bye('Bugungi limit (10 ta) tugagan');
+            const now2 = Date.now(), after = (typeof pd.coins === 'number' ? pd.coins : 0) + L.MAYOR_GIVE;
+            await cl.query("update docs set data=$1, updated=$2 where col='players' and id=$3", [JSON.stringify(Object.assign({}, pd, { coins: after })), now2, rid]);
+            await cl.query("insert into docs(col,id,data,updated) values('ledger',$1,$2,$3)", [crypto.randomBytes(10).toString('hex'), JSON.stringify({ ts: now2, type: 'mayor', uid: rid, name: pd.name || '?', delta: L.MAYOR_GIVE, after, ref: 'hokim:' + a.uid, by: 'server' }), now2]);
+            await cl.query("insert into docs(col,id,data,updated) values('inbox',$1,$2,$3)", [crypto.randomBytes(10).toString('hex'), JSON.stringify({ to: rid, from: a.uid, fromName: 'Hokim', fromTg: '', type: 'coin', text: '👑 Hokim sizga ' + L.MAYOR_GIVE + ' coin berdi', coins: L.MAYOR_GIVE, ts: now2, read: false }), now2]);
+            nd.by = a.uid; nd.ts2 = now2;
+          }
+          mayorOk = true;
+        }
+        if (!mayorOk && !L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
         if (!a.admin && col === 'players' && id === a.uid && b.op !== 'delete' && old && patch && patch.coins !== undefined) {
           const why = L.cheat(old, nd);
           if (why) {
