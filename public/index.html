@@ -466,7 +466,7 @@ function init3(){const el=$('#map'),T=THREE;
  el.addEventListener('pointerdown',e=>{if(e.target.closest('.ctl,#fsc,#fst'))return;V.vx=V.vz=0;RA=0;RL=0;el.setPointerCapture(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);if(pts.size===1){moved=0;t0=Date.now()}else moved=99;g0=pair()});
  el.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;const o=pts.get(e.pointerId);pts.set(e.pointerId,[e.clientX,e.clientY]);
   if(pts.size===1){const dx=e.clientX-o[0],dy=e.clientY-o[1],k=.42*Math.min(V.d,260)/el.clientHeight,k2=k/Math.max(.4,Math.sin(V.pitch)),sn=Math.sin(V.yaw),cs=Math.cos(V.yaw);moved+=Math.abs(dx)+Math.abs(dy);if(V.h)V.h*=.95;V.vx=(-cs*dx*k-sn*dy*k2)*.5;V.vz=(sn*dx*k-cs*dy*k2)*.5;V.x+=-cs*dx*k-sn*dy*k2;V.z+=sn*dx*k-cs*dy*k2}
-  else if(pts.size===2){const p=pair();if(g0){V.d=Math.min(1000,Math.max(14,V.d*Math.pow(g0.d/p.d,.6)));let a=(p.a-g0.a);if(a>Math.PI)a-=2*Math.PI;if(a<-Math.PI)a+=2*Math.PI;RA+=a;if(!RL&&Math.abs(RA)>.05)RL=1;if(RL)V.yaw+=a*1.25;else V.pitch=Math.min(1.45,Math.max(.07,V.pitch+(p.y-g0.y)*.004))}g0=p}
+  else if(pts.size===2){const p=pair();if(g0){V.d=Math.min(1000,Math.max(14,V.d*Math.pow(g0.d/p.d,.6)));let a=(p.a-g0.a);if(a>Math.PI)a-=2*Math.PI;if(a<-Math.PI)a+=2*Math.PI;RA+=a;if(!RL&&Math.abs(RA)>.05)RL=1;if(RL)V.yaw+=a*.75;V.pitch=Math.min(1.45,Math.max(.07,V.pitch+(p.y-g0.y)*.005))}g0=p}
   cam()});
  el.addEventListener('pointerup',e=>{if(!pts.has(e.pointerId))return;const tp=pts.size===1&&moved<8&&Date.now()-t0<500;pts.delete(e.pointerId);g0=null;if(tp)tapAt(e.clientX,e.clientY)});
  el.addEventListener('pointercancel',e=>{pts.delete(e.pointerId);g0=null});
