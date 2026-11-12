@@ -201,6 +201,11 @@ module.exports = async (req, res) => {
         await cl.query('begin');
         const cur = await cl.query('select data from docs where col=$1 and id=$2 for update', [col, id]);
         const old = cur.rows[0] ? cur.rows[0].data : null;
+        // Eskirgan balans bilan yozishdan himoya: mijoz o'zi bilgan balansni (cb) yuboradi; server balansi boshqacha bo'lsa (masalan admin coin qo'shgan bo'lsa), yozuv rad etiladi
+        if (col === 'players' && b.op === 'update' && old && typeof b.cb === 'number' && patch && patch.coins !== undefined && typeof old.coins === 'number' && (a.admin ? old.coins !== b.cb : (id === a.uid && old.coins > b.cb))) {
+          await cl.query('rollback');
+          return bad(res, 409, 'Hisob yangilandi, qayta urinib ko‘ring');
+        }
         let nd = null;
         if (b.op === 'update') { if (!old) { await cl.query('rollback'); return bad(res, 404, 'Topilmadi'); } nd = Object.assign({}, old, patch); }
         else if (b.op !== 'delete') nd = patch;
