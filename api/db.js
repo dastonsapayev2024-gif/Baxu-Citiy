@@ -127,6 +127,34 @@ async function cleanOld(pool) {
   } catch (e) { console.error('eski ma\'lumotlarni tozalash xatosi', e && e.message); }
 }
 
+// ---- Fasl tugashi: taymer tugagach oddiy o'yinchilar uchun yozish to'xtaydi (config.season.end) ----
+let SEAS = { t: 0, e: 0 };
+async function seasonEnd(pool) {
+  if (Date.now() - SEAS.t < 5000) return SEAS.e;
+  const r = await pool.query("select data->'season'->>'end' e from docs where col='config' and id='main'");
+  const e = Number(r.rows[0] && r.rows[0].e) || 0;
+  SEAS = { t: Date.now(), e };
+  return e;
+}
+// Bot orqali e'lon (faqat admin): ko'p odamga bo'lib-bo'lib yuboriladi
+async function tgSend(token, chat, text, app) {
+  for (let k = 0; k < 2; k++) {
+    try {
+      const ac = new AbortController(); const tm = setTimeout(() => ac.abort(), 4000);
+      const r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, signal: ac.signal,
+        body: JSON.stringify({ chat_id: chat, text, disable_web_page_preview: true, reply_markup: app ? { inline_keyboard: [[{ text: '🎮 O‘yinni ochish', url: app }]] } : undefined })
+      });
+      clearTimeout(tm);
+      const j = await r.json().catch(() => ({}));
+      if (j && j.ok) return true;
+      if (j && j.error_code === 429 && k === 0) { await new Promise(z => setTimeout(z, Math.min(2000, ((j.parameters && j.parameters.retry_after) || 1) * 1000))); continue; }
+      return false;
+    } catch (e) { return false; }
+  }
+  return false;
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return bad(res, 405, 'POST kerak');
@@ -178,6 +206,25 @@ module.exports = async (req, res) => {
       return res.json({ now: Date.now(), cols: out });
     }
 
+    if (b.op === 'announce') {
+      if (!a.admin) return bad(res, 403, 'Ruxsat yo‘q');
+      const text = String(b.text || '').trim().slice(0, 1500);
+      const token = String(process.env.BOT_TOKEN || '').replace(/\s+/g, '');
+      if (text.length < 5) return bad(res, 400, 'Matn yo‘q');
+      if (!token) return bad(res, 500, 'BOT_TOKEN sozlanmagan');
+      const app = String(process.env.APP_LINK || '').replace(/\?startapp=.*$/, '');
+      let ids;
+      const off = Math.max(0, Math.floor(+b.off || 0)), LIM = 60;
+      if (b.test) ids = /^\d{1,15}$/.test(String(process.env.ADMIN_TG_ID || '').trim()) ? ['tg' + String(process.env.ADMIN_TG_ID).trim()] : [];
+      else ids = (await pool.query("select id from docs where col='players' and id ~ '^tg[0-9]{1,15}$' and coalesce(data->>'blocked','false')<>'true' order by id offset $1 limit $2", [off, LIM])).rows.map(x => x.id);
+      let ok = 0, fail = 0;
+      for (let i = 0; i < ids.length; i += 15) {
+        const rs = await Promise.all(ids.slice(i, i + 15).map(id => tgSend(token, id.slice(2), text, app)));
+        rs.forEach(x => (x ? ok++ : fail++));
+      }
+      return res.json({ now: Date.now(), ok, fail, next: off + ids.length, done: b.test ? true : ids.length < LIM });
+    }
+
     const col = String(b.col || '');
     if (!L.KNOWN.includes(col)) return bad(res, 400, 'Noma’lum bo‘lim');
 
@@ -195,6 +242,8 @@ module.exports = async (req, res) => {
       const patch = b.data && typeof b.data === 'object' && !Array.isArray(b.data) ? b.data : null;
       if (b.op !== 'delete' && !patch) return bad(res, 400, 'Ma’lumot noto‘g‘ri');
       if (!a.admin && await isBlocked(pool, a.uid)) return bad(res, 403, 'Siz bloklangansiz');
+      const se = a.admin ? 0 : await seasonEnd(pool);
+      const frozen = !!se && Date.now() >= se;
       const cl = await pool.connect();
       let pushNd = null;
       try {
@@ -272,6 +321,12 @@ module.exports = async (req, res) => {
           nd = { b: bid, t: victim, by: a.uid, day, ts: now2, f: nf };
           pushNd = ib; bzOk = true;
         }
+        // Fasl tugagan: oddiy o'yinchi faqat chat/like/xabar yoza oladi, o'z hujjatida coin va turnir maydonlarini o'zgartira olmaydi
+        if (!a.admin && frozen) {
+          const same = k => JSON.stringify(nd && nd[k]) === JSON.stringify(old && old[k]);
+          const okF = ['chat', 'likes', 'inbox'].includes(col) || (col === 'players' && id === a.uid && old && nd && b.op !== 'delete' && ['coins', 'wk', 'wp', 'pz', 'gf'].every(same));
+          if (!okF) { await cl.query('rollback'); return bad(res, 403, 'Fasl tugadi. 2-fasl g‘oliblari aniqlanmoqda'); }
+        }
         if (!mayorOk && !bzOk && !L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
         if (!a.admin && col === 'players' && id === a.uid && b.op !== 'delete' && old && patch && patch.coins !== undefined) {
           const why = L.cheat(old, nd);
@@ -330,6 +385,7 @@ module.exports = async (req, res) => {
         await cl.query('commit');
         AGG.clear();
         if (col === 'players') BL.clear();
+        if (col === 'config') SEAS.t = 0;
         if (col === 'inbox' && b.op === 'add') pushNd = nd;
       } catch (e) { try { await cl.query('rollback'); } catch (_) {} throw e; }
       finally { cl.release(); }
