@@ -312,32 +312,15 @@ module.exports = async (req, res) => {
         // Admin uchun faoliyat tarixi (faqat oddiy o'yinchi yozuvlari): kim, qachon, nima qildi, necha coin
         if (!a.admin && b.op !== 'delete' && nd) {
           try {
-            await cl.query('savepoint act');
             const acts = [], ch = k => JSON.stringify(nd[k]) !== JSON.stringify(old && old[k]);
             if (col === 'players' && id === a.uid) {
               if (!old) acts.push({ type: 'join', uid: id, name: nd.name, text: 'O‘yinga qo‘shildi', d: nd.coins || 0, after: nd.coins || 0 });
-              else if (typeof nd.coins === 'number' && nd.coins !== (old.coins || 0)) {
-                const d = nd.coins - (old.coins || 0);
-                let w;
-                if (ch('gf')) w = 'Yangi o‘yinchi sovg‘asi';
-                else if (ch('pz')) w = 'Haftalik turnir sovrini';
-                else if (ch('ch')) w = '2 soatlik sovg‘a sandig‘i';
-                else if (ch('sty')) w = 'Story mukofoti';
-                else if (ch('lc')) w = 'Daraja mukofoti';
-                else if (ch('ct') && d > 0) w = '40 mijozga xizmat';
-                else if (ch('st') && d > 0) w = 'Sandiqdan coin oldi';
-                else if (ch('hc')) w = 'Boshqa o‘yinchiga yordam berdi';
-                else if (d > 0 && ch('m')) w = 'Missiya mukofoti';
-                else if (d < 0 && ch('wk')) w = 'Qavat sotib oldi';
-                else if (d < 0) w = 'Xarid (uslub / oltin / boshqa)';
-                else w = 'Coin oldi';
-                acts.push({ type: 'coin', uid: id, name: nd.name, text: w, d, after: nd.coins });
-              }
             } else if (col === 'b' && nd.owner) {
               if (!old && !nd.ctr) acts.push({ type: 'build', uid: nd.owner, text: 'Bino qurdi', fl: nd.floors || 1 });
               else if (old && old.owner !== nd.owner && !nd.ctr) acts.push({ type: 'trade', uid: nd.owner, from: old.owner, text: 'Bino sotib oldi', fl: nd.floors });
-              else if (old && nd.floors !== old.floors && !nd.ctr) acts.push({ type: 'floors', uid: nd.owner, text: 'Qavat: ' + old.floors + ' → ' + nd.floors, fl: nd.floors });
+              else if (old && nd.floors !== old.floors && !nd.ctr) acts.push({ type: 'floors', uid: nd.owner, text: 'Qavat: ' + old.floors + ' → ' + nd.floors, from: old.floors, to: nd.floors });
             }
+            if (acts.length) await cl.query('savepoint act');
             for (const x of acts) {
               x.ts = Date.now(); x.by = a.uid;
               await cl.query("insert into docs(col,id,data,updated) values('act',$1,$2,$3)", [crypto.randomBytes(10).toString('hex'), JSON.stringify(x), Date.now()]);
