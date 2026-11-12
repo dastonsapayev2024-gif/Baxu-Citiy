@@ -136,7 +136,7 @@ function giftChk(){if(giftBusy||!me||me.gf!==1||me.blocked)return;giftBusy=1;con
   const ga=giftAmt();upd({coins:(me.coins||0)+ga,gf:2});$('#gok').onclick=()=>{d.remove();giftBusy=0;toast('🪙 '+fmt(ga)+' coin hisobingizga tushdi');render()}}}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000)}
 function curM(){let m=me.m;if(!m||m.day!==mper())m={day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}};return JSON.parse(JSON.stringify(m))}
-function upd(p){Object.assign(me,p);players[uid]=me;render();return col('players').doc(uid).update(p).catch(e=>toast(e.message))}
+function upd(p){const cb=p.coins!==undefined?me.coins:undefined;Object.assign(me,p);players[uid]=me;render();return col('players').doc(uid).update(p,cb).catch(e=>toast(e.message))}
 function updB(id,p){Object.assign(bs[id],p);render();return col('b').doc(id).update(p).catch(e=>toast(e.message))}
 function prog(id,n=1){const m=curM();m.p[id]=(m.p[id]||0)+n;return m}
 function nickOk(n){return !Object.entries(players).some(([i,p])=>i!==uid&&String(p.name||'').toLowerCase()===n.toLowerCase())}
@@ -340,13 +340,13 @@ const shopSheet=()=>{if(!shop)return'';const p=shop.p||pks()[shop.i];return `<di
 const pill=o=>{const a=apprs[o.id];return a?(a.status==='approved'?'<span class="st a">Tasdiqlandi</span>':'<span class="st r">Rad etildi</span>'):'<span class="st p">Kutilmoqda</span>'};
 function audit(t){if(isAdmin)col('audit').add({ts:Date.now(),text:t,by:'Sapayev Dastonbek'}).catch(()=>{})}
 function ledger(type,u,d,after,ref){col('ledger').add({ts:Date.now(),type,uid:u,name:(players[u]||{}).name||'?',delta:d,after,ref:ref||'',by:'Sapayev Dastonbek'}).catch(()=>{})}
-async function adjCoins(u,d,type){if(!isAdmin)return;const p=players[u];if(!p||!d)return;const nb=Math.max(0,p.coins+d);try{await col('players').doc(u).update({coins:nb});ledger(type||'adjust',u,nb-p.coins,nb);audit((d>0?'+':'')+d+' coin → '+p.name);toast('Bajarildi')}catch(e){toast(e.message)}}
+async function adjCoins(u,d,type){if(!isAdmin)return;const p=players[u];if(!p||!d)return;const nb=Math.max(0,p.coins+d);try{await col('players').doc(u).update({coins:nb},p.coins);ledger(type||'adjust',u,nb-p.coins,nb);audit((d>0?'+':'')+d+' coin → '+p.name);toast('Bajarildi')}catch(e){toast(e.message)}}
 function adjBy(u,sg){const n=Math.floor(+aa);if(!(n>0))return toast('Miqdorni kiriting');adjCoins(u,sg*n,sg>0?'send':'remove')}
 async function decide(oid,ok){if(!isAdmin)return;const o=ords.find(x=>x.id===oid);if(!o||apprs[oid])return toast('Buyurtma allaqachon ko‘rib chiqilgan');
  try{const d=await col('approvals').doc(oid).get();if(d&&d.exists)return toast('Allaqachon ko‘rib chiqilgan');
   await col('approvals').doc(oid).set({id:oid,uid:o.uid,status:ok?'approved':'rejected',amt:o.amt,price:o.price,ts:Date.now()});
   if(ok){const p=players[o.uid];if(!p){await col('approvals').doc(oid).delete();return toast('O‘yinchi topilmadi')}
-   try{const nb=p.coins+o.amt;await col('players').doc(o.uid).update({coins:nb});ledger('purchase',o.uid,o.amt,nb,oid)}catch(e){await col('approvals').doc(oid).delete();return toast('Coin berilmadi: '+e.message)}}
+   try{const nb=p.coins+o.amt;await col('players').doc(o.uid).update({coins:nb},p.coins);ledger('purchase',o.uid,o.amt,nb,oid)}catch(e){await col('approvals').doc(oid).delete();return toast('Coin berilmadi: '+e.message)}}
   col('inbox').add({to:o.uid,from:uid,fromName:'🛍️ Coin Shop',fromTg:'',type:ok?'deal':'no',text:ok?'To‘lovingiz tasdiqlandi! 🪙 '+fmt(o.amt)+' coin hisobingizga qo‘shildi. Rahmat!':'Buyurtmangiz ('+oid+') rad etildi. Savol bo‘lsa @'+(cfg.tg||'Baxu_Uc')+' ga yozing.',coins:ok?o.amt:0,ts:Date.now(),read:false}).catch(()=>{});
   audit((ok?'TASDIQLANDI ':'RAD ETILDI ')+oid+' · '+o.name+' · '+fmt(o.price)+' so‘m');toast(ok?'Tasdiqlandi, coin berildi':'Rad etildi')}catch(e){toast(e.message)}}
 function savePacks(){const P=pks().map((p,i)=>[p[0],$('#pn'+i).value.trim()||p[1],Math.max(1,Math.floor(+$('#pc'+i).value)),Math.min(90,Math.max(0,+$('#pd'+i).value))]);saveC({packs:P},'Paketlar yangilandi')}
