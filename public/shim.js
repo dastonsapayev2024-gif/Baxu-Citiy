@@ -64,7 +64,7 @@
   }
   function write(body) {
     wseq++;
-    return api(body).then(function (r) { wseq++; kick(150); return r; }, function (e) { wseq++; throw e; });
+    return api(body).then(function (r) { wseq++; kick(150); return r; }, function (e) { wseq++; kick(300); throw e; });
   }
 
   function snapOf(c, q) {
@@ -149,7 +149,7 @@
       });
     },
     set: function (d) { return write({ op: 'set', col: this.c, id: this.i, data: d }); },
-    update: function (d) { return write({ op: 'update', col: this.c, id: this.i, data: d }); },
+    update: function (d, cb) { var q = { op: 'update', col: this.c, id: this.i, data: d }; if (typeof cb === 'number') q.cb = cb; return write(q); },
     delete: function () { return write({ op: 'delete', col: this.c, id: this.i }); },
     onSnapshot: function (cb, eb) { return sub(this.c, null, this.i, cb, eb); }
   };
