@@ -54,6 +54,19 @@ function fullRows(pool, c, k) {
   return p;
 }
 
+// Delta so'rovlari: bir xil versiyadagi o'yinchilar bitta bazadan o'qishni bo'lishadi (Neon trafigini kamaytiradi)
+const DLT = new Map();
+function deltaRows(pool, c, from, to) {
+  const key = c + '|' + from + '|' + to;
+  const e = DLT.get(key);
+  if (e) return e;
+  if (DLT.size > 60) { const it = DLT.keys(); for (let i = 0; i < 30; i++) DLT.delete(it.next().value); }
+  const p = pool.query('select id,data from docs where col=$1 and updated>=$2 order by updated desc limit 1500', [c, from - 5000]).then(r => r.rows);
+  DLT.set(key, p);
+  p.catch(() => { if (DLT.get(key) === p) DLT.delete(key); });
+  return p;
+}
+
 // ---- Bloklangan o'yinchilar va firibgarlikni avtomatik bloklash ----
 const BL = new Map();
 async function isBlocked(pool, uid) {
@@ -196,7 +209,7 @@ module.exports = async (req, res) => {
           rows = (await pool.query('select id,data from docs where col=$1 and ' + RESTR[c] + ' order by updated desc limit 1500', [c, a.uid])).rows;
         } else {
           if (o && typeof o.v === 'number' && o.v > 0 && o.v <= k.v && DELTA.includes(c)) {
-            rows = (await pool.query('select id,data from docs where col=$1 and updated>=$2 order by updated desc limit 1500', [c, o.v - 5000])).rows;
+            rows = await deltaRows(pool, c, o.v, k.v);
             delta = rows.length < 1500;
           }
           if (!delta) rows = await fullRows(pool, c, k);
