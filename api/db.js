@@ -113,6 +113,7 @@ async function cleanOld(pool) {
     if (r.rowCount) ch = 1;
     const ra = await pool.query("delete from docs where col='aid' and updated<$1", [Date.now() - 3 * 864e5]);
     if (ra.rowCount) ch = 1;
+    await pool.query("delete from docs where col='act' and updated<$1", [Date.now() - 10 * 864e5]);
     const rz = await pool.query("delete from docs where col='bz' and updated<$1", [Date.now() - 3 * 864e5]);
     if (rz.rowCount) ch = 1;
     const q = await pool.query("select b.id, b.data bd from docs b join docs p on p.col='players' and p.id=b.data->>'owner' where b.col='b' and b.id=b.data->>'owner' and coalesce((b.data->>'ctr')::boolean,false)=false and coalesce((p.data->>'adm')::boolean,false)=false and coalesce((p.data->>'blocked')::boolean,false)=false and greatest(coalesce((p.data->>'seen')::bigint,0), p.updated) < $1 limit 50", [Date.now() - IDLE_TTL]);
@@ -155,7 +156,7 @@ module.exports = async (req, res) => {
       rws.forEach(x => { cur[x.col] = { v: Number(x.v), n: x.n }; });
       const out = {};
       // Faqat o'zgargan bo'limlar; ommaviy bo'limlarda faqat o'zgargan hujjatlar (delta)
-      const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals', 'aid', 'bz'];
+      const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals', 'aid', 'bz', 'act'];
       const RESTR = { inbox: "data->>'to'=$2", orders: "data->>'uid'=$2", cq: "data->>'uid'=$2", reqs: "(data->>'from'=$2 or data->>'to'=$2)" };
       for (const c of cols) {
         const k = cur[c] || { v: 0, n: 0 };
@@ -302,6 +303,41 @@ module.exports = async (req, res) => {
               await cl.query("insert into docs(col,id,data,updated) values('b',$1,$2,$3)", ['n' + crypto.randomBytes(8).toString('hex'), JSON.stringify({ owner: old.owner, floors: 1, color: pd.color || '#888', sale: '', ts: Date.now() }), Date.now()]);
             }
           }
+        }
+        // Admin uchun faoliyat tarixi (faqat oddiy o'yinchi yozuvlari): kim, qachon, nima qildi, necha coin
+        if (!a.admin && b.op !== 'delete' && nd) {
+          try {
+            await cl.query('savepoint act');
+            const acts = [], ch = k => JSON.stringify(nd[k]) !== JSON.stringify(old && old[k]);
+            if (col === 'players' && id === a.uid) {
+              if (!old) acts.push({ type: 'join', uid: id, name: nd.name, text: 'O‘yinga qo‘shildi', d: nd.coins || 0, after: nd.coins || 0 });
+              else if (typeof nd.coins === 'number' && nd.coins !== (old.coins || 0)) {
+                const d = nd.coins - (old.coins || 0);
+                let w;
+                if (ch('gf')) w = 'Yangi o‘yinchi sovg‘asi';
+                else if (ch('pz')) w = 'Haftalik turnir sovrini';
+                else if (ch('ch')) w = '2 soatlik sovg‘a sandig‘i';
+                else if (ch('sty')) w = 'Story mukofoti';
+                else if (ch('lc')) w = 'Daraja mukofoti';
+                else if (ch('ct') && d > 0) w = '40 mijozga xizmat';
+                else if (ch('st') && d > 0) w = 'Sandiqdan coin oldi';
+                else if (ch('hc')) w = 'Boshqa o‘yinchiga yordam berdi';
+                else if (d > 0 && ch('m')) w = 'Missiya mukofoti';
+                else if (d < 0 && ch('wk')) w = 'Qavat sotib oldi';
+                else if (d < 0) w = 'Xarid (uslub / oltin / boshqa)';
+                else w = 'Coin oldi';
+                acts.push({ type: 'coin', uid: id, name: nd.name, text: w, d, after: nd.coins });
+              }
+            } else if (col === 'b' && nd.owner) {
+              if (!old && !nd.ctr) acts.push({ type: 'build', uid: nd.owner, text: 'Bino qurdi', fl: nd.floors || 1 });
+              else if (old && old.owner !== nd.owner && !nd.ctr) acts.push({ type: 'trade', uid: nd.owner, from: old.owner, text: 'Bino sotib oldi', fl: nd.floors });
+              else if (old && nd.floors !== old.floors && !nd.ctr) acts.push({ type: 'floors', uid: nd.owner, text: 'Qavat: ' + old.floors + ' → ' + nd.floors, fl: nd.floors });
+            }
+            for (const x of acts) {
+              x.ts = Date.now(); x.by = a.uid;
+              await cl.query("insert into docs(col,id,data,updated) values('act',$1,$2,$3)", [crypto.randomBytes(10).toString('hex'), JSON.stringify(x), Date.now()]);
+            }
+          } catch (e) { console.error('act log', e && e.message); try { await cl.query('rollback to savepoint act'); } catch (_) {} }
         }
         await cl.query('commit');
         AGG.clear();
