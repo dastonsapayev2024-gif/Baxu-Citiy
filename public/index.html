@@ -128,11 +128,12 @@ function prizeChk(){
  document.body.appendChild(d);$('#przok').onclick=()=>{if(me.pz===W){d.remove();return}upd({coins:(me.coins||0)+pr,pz:W});d.remove();toast('🪙 +'+fmt(pr)+' coin hisobingizga tushdi')}}
 
 let giftBusy=0;
+const giftAmt=()=>{let t=0;for(let f=1;f<15;f++)t+=price(f,false);return Math.min(24000,Math.max(5000,Math.ceil(t/100)*100))};
 function giftChk(){if(giftBusy||!me||me.gf!==1||me.blocked)return;giftBusy=1;const d=document.createElement('div');d.id='gift';d.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(5,10,30,.78);display:flex;align-items:center;justify-content:center;padding:20px';
  d.innerHTML='<style>@keyframes gbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-14px) rotate(4deg)}}@keyframes gpop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}</style><div style="text-align:center;color:#fff;max-width:340px"><div style="font-size:22px;font-weight:800;margin-bottom:6px">Xush kelibsiz! 🎉</div><div style="opacity:.9;margin-bottom:18px">Yangi o‘yinchi sovg‘asi sizni kutmoqda</div><div id="gbox" style="font-size:130px;line-height:1;cursor:pointer;animation:gbob 1.2s ease-in-out infinite">🎁</div><div id="gtx" style="margin-top:18px;font-weight:700">Ochish uchun sovg‘ani bosing 👆</div></div>';
  document.body.appendChild(d);
- $('#gbox').onclick=()=>{if(!me||me.gf!==1)return;const b=$('#gbox');b.onclick=null;b.style.animation='gpop .6s both';b.textContent='🪙';$('#gtx').innerHTML='<div style="font-size:34px;font-weight:800;color:#ffd23f">+5 000 coin!</div><button id="gok" style="margin-top:16px;padding:12px 30px;border:0;border-radius:14px;background:#2ea44f;color:#fff;font-size:17px;font-weight:700">Rahmat!</button>';
-  upd({coins:(me.coins||0)+5000,gf:2});$('#gok').onclick=()=>{d.remove();giftBusy=0;toast('🪙 5 000 coin hisobingizga tushdi');render()}}}
+ $('#gbox').onclick=()=>{if(!me||me.gf!==1)return;const b=$('#gbox');b.onclick=null;b.style.animation='gpop .6s both';b.textContent='🪙';$('#gtx').innerHTML='<div style="font-size:34px;font-weight:800;color:#ffd23f">+'+fmt(giftAmt())+' coin!</div><div style="opacity:.85;font-size:14px;margin-top:6px">15 qavatgacha yetadi 🏙️</div><button id="gok" style="margin-top:16px;padding:12px 30px;border:0;border-radius:14px;background:#2ea44f;color:#fff;font-size:17px;font-weight:700">Rahmat!</button>';
+  const ga=giftAmt();upd({coins:(me.coins||0)+ga,gf:2});$('#gok').onclick=()=>{d.remove();giftBusy=0;toast('🪙 '+fmt(ga)+' coin hisobingizga tushdi');render()}}}
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;setTimeout(()=>e.style.opacity=0,2000)}
 function curM(){let m=me.m;if(!m||m.day!==mper())m={day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}};return JSON.parse(JSON.stringify(m))}
 function upd(p){Object.assign(me,p);players[uid]=me;render();return col('players').doc(uid).update(p).catch(e=>toast(e.message))}
