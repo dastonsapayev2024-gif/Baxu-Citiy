@@ -162,6 +162,7 @@
     onSnapshot: function (cb, eb) { return sub(this.c, this.q, null, cb, eb); }
   };
   var db = {
+    call: function (b) { return api(b); },
     collection: function (c) { return new Col(c); },
     doc: function (p) { var a = String(p).split('/'); return new Doc(a[0], a[1]); }
   };
