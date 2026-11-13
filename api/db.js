@@ -221,15 +221,20 @@ module.exports = async (req, res) => {
 
     if (b.op === 'announce') {
       if (!a.admin) return bad(res, 403, 'Ruxsat yo‘q');
-      const text = String(b.text || '').trim().slice(0, 1500);
+      const text = String(b.text || '').trim().slice(0, 3500);
       const token = String(process.env.BOT_TOKEN || '').replace(/\s+/g, '');
       if (text.length < 5) return bad(res, 400, 'Matn yo‘q');
       if (!token) return bad(res, 500, 'BOT_TOKEN sozlanmagan');
-      const app = String(process.env.APP_LINK || '').replace(/\?startapp=.*$/, '');
+      const app = b.nobtn ? '' : String(process.env.APP_LINK || '').replace(/\?startapp=.*$/, '');
       let ids;
       const off = Math.max(0, Math.floor(+b.off || 0)), LIM = 60;
       if (b.test) ids = /^\d{1,15}$/.test(String(process.env.ADMIN_TG_ID || '').trim()) ? ['tg' + String(process.env.ADMIN_TG_ID).trim()] : [];
-      else ids = (await pool.query("select id from docs where col='players' and id ~ '^tg[0-9]{1,15}$' and coalesce(data->>'blocked','false')<>'true' order by id offset $1 limit $2", [off, LIM])).rows.map(x => x.id);
+      else {
+        // Kimga: hamma / oxirgi 3 kunda kirganlar (active) / 3 kundan beri kirmaganlar (idle)
+        const cut = Date.now() - 3 * 864e5, seg = b.seg === 'idle' ? " and coalesce((data->>'seen')::bigint,0) < $3" : b.seg === 'active' ? " and coalesce((data->>'seen')::bigint,0) >= $3" : '';
+        const args = seg ? [off, LIM, cut] : [off, LIM];
+        ids = (await pool.query("select id from docs where col='players' and id ~ '^tg[0-9]{1,15}$' and coalesce(data->>'blocked','false')<>'true'" + seg + " order by id offset $1 limit $2", args)).rows.map(x => x.id);
+      }
       let ok = 0, fail = 0;
       for (let i = 0; i < ids.length; i += 15) {
         const rs = await Promise.all(ids.slice(i, i + 15).map(id => tgSend(token, id.slice(2), text, app)));
