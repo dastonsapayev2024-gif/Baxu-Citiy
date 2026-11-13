@@ -154,10 +154,12 @@ function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(isAdmin&&!me.ci&&bs[uid]){p.ci=1;col('b').doc(uid).update({ctr:true,sale:'200 000 so‘m'}).catch(()=>{})}
  if(Object.keys(p).length)col('players').doc(uid).update(p)}
 function buyF(id){const b=bs[id],c=price(b.floors,b.gold);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+1});upd({coins:me.coins-c,m:prog('floor'),...wkInc()});toast('Yangi qavat! 🎉')}
-const SG=10000,CAP=200,CG=1e4,CCAP=40,CRATE=[10,5,3];
+const CAP=200,CCAP=40,CRATE=[10,5,3],NEWD=3*864e5;
+// Sandiq: har 1 soniyada, mijoz: har 10 soniyada (hamma uchun)
+const SGf=()=>1e3,CGf=()=>1e4;
 const srN=()=>me&&me.sr&&me.sr.d===today()?me.sr.n:0;
-const stored=()=>me&&me.st?Math.min(CAP,Math.floor((Date.now()-me.st)/SG)):0;
-const waiting=()=>me&&me.ct?Math.min(CCAP,Math.floor((Date.now()-me.ct)/CG)):0;
+const stored=()=>me&&me.st?Math.min(CAP,Math.floor((Date.now()-me.st)/SGf())):0;
+const waiting=()=>me&&me.ct?Math.min(CCAP,Math.floor((Date.now()-me.ct)/CGf())):0;
 const FULLR=250;
 function collect(){const n=stored(),a=Math.floor(n*FULLR/CAP);if(!a)return toast('Sandiq bo‘sh');upd({coins:me.coins+a,st:Date.now(),m:prog('col')});toast('+'+a+' coin'+(n>=CAP?' 🎉 (to‘la sandiq)':''))}
 function serve(){const n=srN();const w=waiting();if(w<CCAP)return toast('Avval '+CCAP+' mijoz to‘lsin ('+w+'/'+CCAP+')');const a=FULLR;upd({coins:me.coins+a,ct:Date.now(),sr:{d:today(),n:n+1},m:prog('tap',CCAP)});toast('+'+a+' coin 🎉 ('+CCAP+' mijoz)')}
@@ -165,7 +167,7 @@ const STORYC=1000;
 function shareStory(){const w=window.Telegram&&Telegram.WebApp;if(!w||!w.shareToStory)return toast('Telegram ilovasini yangilang (Stories uchun kerak)');const ln=LNK('r-'+bcode(uid));try{w.shareToStory(location.origin+'/story.jpg',{text:'Sirli City — Telegramda o‘z shahringni qur! 🏙️ '+ln,widget_link:{url:ln,name:'O‘ynash'}});try{localStorage.setItem('stp',String(Date.now()))}catch(e){}toast('Storisga joylang, so‘ng qaytib «1000 coin olish» ni bosing')}catch(e){toast('Ochib bo‘lmadi')}}
 const styDone=()=>!!(me&&me.sty&&dkey(me.sty)===today());
 function claimStory(){if(!me||styDone())return toast('Bugun olingan, ertaga yana');let t=0;try{t=+localStorage.getItem('stp')||0}catch(e){}if(!t||dkey(t)!==today())return toast('Avval «Storisga joylash» ni bosing');if(Date.now()-t<15000)return toast('Storisga joylab, qaytib bosing');try{localStorage.removeItem('stp')}catch(e){}upd({coins:me.coins+STORYC,sty:Date.now()});toast('+'+STORYC+' coin 🎉')}
-const farm=()=>`<div class="card"><div class="row"><b>🧰 Sandiq <span id="stv"></span></b><button id="stbtn" class="y" onclick="collect()">Olish</button></div><div class="bar"><div id="stb" style="width:0"></div></div><small>Har 10 soniyada coin yig‘iladi. To‘lganda («200/200») «Olish» ni bossangiz 250 coin olasiz</small></div><div class="card"><div class="row"><b>🙋 Mijozlar: <span id="cw"></span>/${CCAP}</b><button id="cbtn" onclick="serve()">Olish</button></div><div class="bar"><div id="cwb" style="width:0"></div></div><small id="cinfo"></small></div>`;
+const farm=()=>`<div class="card"><div class="row"><b>🧰 Sandiq <span id="stv"></span></b><button id="stbtn" class="y" onclick="collect()">Olish</button></div><div class="bar"><div id="stb" style="width:0"></div></div><small>Har ${SGf()/1e3} soniyada coin yig‘iladi. To‘lganda («200/200») «Olish» ni bossangiz 250 coin olasiz</small></div><div class="card"><div class="row"><b>🙋 Mijozlar: <span id="cw"></span>/${CCAP}</b><button id="cbtn" onclick="serve()">Olish</button></div><div class="bar"><div id="cwb" style="width:0"></div></div><small id="cinfo"></small></div>`;
 function claim(id){const m=curM(),r=mrw(id);if(m.c[id])return;if(id==='invite'&&inv()<3)return;m.c[id]=1;upd({coins:me.coins+r,xp:(me.xp||0)+Math.round(r/10),m});toast('+'+r+' coin')}
 function send(){const i=$('#ci'),t=i.value.trim();if(!t||me.blocked)return;i.value='';col('chat').add({uid,name:me.name,text:t.slice(0,200),ts:Date.now()});upd({m:prog('chat')})}
 const tgOk=t=>/^[A-Za-z0-9_]{4,32}$/.test(t)&&!Object.entries(players).some(([i,p])=>i!==uid&&String(p.tg||'').toLowerCase()===t.toLowerCase());
@@ -448,7 +450,7 @@ function alerts(){const a={};if(!me)return a;const m=curM();
 function dots(){const al=alerts();document.querySelectorAll('nav button[data-t],#tq button[data-t]').forEach(b=>b.classList.toggle('dot',!!al[b.dataset.t]))}
 function tickC(){const e=$('#chest'),o=$('#on');if(o)o.textContent='🟢 '+Math.max(1,Object.values(players).filter(p=>(p.seen||0)>Date.now()-90000).length)+' onlayn';const LV=$('#live');if(LV){const rl=Object.values(players).filter(p=>p.ts).sort((a,b)=>b.ts-a.ts).slice(0,5);if(rl.length){const p=rl[Math.floor(Date.now()/4000)%rl.length];LV.style.display='flex';if(LV.dataset.k!==p.id){LV.dataset.k=p.id;LV.innerHTML='<span class="jn">JONLI</span>🏠 <b>'+esc(p.name)+'</b>'+(p.tg?' (@'+esc(p.tg)+')':'')+' shaharga qo‘shildi, uyi qurildi'}}}if(!me)return;
  if(e){const l=chestLeft();e.textContent=l?'🎁 '+[l/36e5|0,(l/6e4|0)%60,(l/1e3|0)%60].map(n=>String(n).padStart(2,'0')).join(':'):'🎁 Ochish!';e.style.opacity=l?.7:1}
- const a=stored(),w=waiting(),S=(k,v)=>{const x=$('#'+k);if(x)x.textContent=v};S('stv',a+'/'+CAP);S('cw',w);{const n=srN(),ci=$('#cinfo'),cw=$('#cwb');if(cw)cw.style.width=w/CCAP*100+'%';if(ci){ci.textContent='Har 10 soniyada 1 mijoz keladi. '+CCAP+' ta to‘lgach «Olish» ni bosing: '+FULLR+' coin olasiz. Bugun: '+n+' marta xizmat qildingiz'}}
+ const a=stored(),w=waiting(),S=(k,v)=>{const x=$('#'+k);if(x)x.textContent=v};S('stv',a+'/'+CAP);S('cw',w);{const n=srN(),ci=$('#cinfo'),cw=$('#cwb');if(cw)cw.style.width=w/CCAP*100+'%';if(ci){ci.textContent='Har '+CGf()/1e3+' soniyada 1 mijoz keladi. '+CCAP+' ta to‘lgach «Olish» ni bosing: '+FULLR+' coin olasiz. Bugun: '+n+' marta xizmat qildingiz'}}
  const b=$('#stb');if(b)b.style.width=a/CAP*100+'%';const sb=$('#stbtn');if(sb)sb.disabled=!a;const cb=$('#cbtn');if(cb)cb.disabled=w<CCAP;dots()}
 function go(t){if(fsOn&&t!=='city')fs();tab=t;sel=null;buyS=null;if(t==='city'&&!fsOn){tab='city';fs();return}render()}
 
