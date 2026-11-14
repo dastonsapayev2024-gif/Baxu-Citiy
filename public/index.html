@@ -106,7 +106,7 @@ const bname=b=>b.label?String(b.label):((players[b.owner]||{}).adm?'Baxu':oname(
 const mine=()=>Object.entries(bs).filter(([i,b])=>b.owner===uid);
 const WK=ms=>Math.floor((ms+5*36e5+3*864e5)/(7*864e5)),WKEND=w=>(w+1)*7*864e5-3*864e5-5*36e5,WPR=[7000,5000,3000,1000];
 let rkT='w',prB=0;
-function wkInc(){const w=WK(Date.now()),o=me.wk,f=o&&o.w===w?(o.f||0)+1:1,r={wk:{w,f,t:Date.now()}};if(o&&o.w<w)r.wp=o;return r}
+function wkInc(n=1){const w=WK(Date.now()),o=me.wk,f=o&&o.w===w?(o.f||0)+n:n,r={wk:{w,f,t:Date.now()}};if(o&&o.w<w)r.wp=o;return r}
 function wkOf(p,w){if(p.wk&&p.wk.w===w)return p.wk;if(p.wp&&p.wp.w===w)return p.wp;return{w,f:0,t:0}}
 function wkList(w,full){const tf={},lk={},bi={};if(full)Object.entries(bs).filter(x=>rkOK(x)).sort((x,y)=>(y[1].floors||0)-(x[1].floors||0)||(x[1].ts||0)-(y[1].ts||0)).forEach(([i,b])=>{if(tf[b.owner]!=null)return;tf[b.owner]=b.floors||0;bi[b.owner]=i;lk[b.owner]=lc(i)});return Object.entries(players).filter(([i,p])=>!p.blocked&&!p.purged&&!p.adm).map(([i,p])=>{const k=wkOf(p,w);return{i,p,f:k.f||0,t:k.t||0,tf:tf[i]||0,bi:bi[i]||i,lk:lk[i]||0}}).sort((a,b)=>b.f-a.f||(a.f?a.t-b.t:b.tf-a.tf)||(a.i<b.i?-1:1))}
 function wkHtml(w){
@@ -153,7 +153,8 @@ function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(isAdmin&&!me.adm){p.adm=true;p.name='Baxu'}
  if(isAdmin&&!me.ci&&bs[uid]){p.ci=1;col('b').doc(uid).update({ctr:true,sale:'200 000 so‘m'}).catch(()=>{})}
  if(Object.keys(p).length)col('players').doc(uid).update(p)}
-function buyF(id){const b=bs[id],c=price(b.floors,b.gold);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+1});upd({coins:me.coins-c,m:prog('floor'),...wkInc()});toast('Yangi qavat! 🎉')}
+const costN=(b,n)=>{let t=0;for(let k=0;k<n;k++)t+=price(b.floors+k,b.gold);return t};
+function buyF(id,n=1){n=[1,5,10].includes(n)?n:1;const b=bs[id];if(!b||b.owner!==uid)return;const c=costN(b,n);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+n});upd({coins:me.coins-c,m:prog('floor',n),...wkInc(n)});toast(n>1?'+'+n+' qavat! 🎉':'Yangi qavat! 🎉')}
 const CAP=200,CCAP=40,CRATE=[10,5,3],NEWD=3*864e5;
 // Sandiq: har 1 soniyada, mijoz: har 10 soniyada (hamma uchun)
 const SGf=()=>1e3,CGf=()=>1e4;
@@ -599,7 +600,7 @@ function render(){
   if(sel&&bs[sel])h+=bcard(sel);
  }else if(tab==='mine'){
   h=mine().map(([id,b])=>{const c=price(b.floors,b.gold);
-   return `<div class="card"><h3>${esc(bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗 Havola</button></h3>${statsBox(id)}<div class="row"><span>Keyingi qavat: <b>🪙 ${fmt(c)}</b></span></div><button class="big y" ${me.coins<c?'disabled':''} onclick="buyF('${id}')">Qavat sotib olish</button>
+   return `<div class="card"><h3>${esc(bname(b))} <button class="g" style="float:right;padding:5px 10px" onclick="copyLink('${id}')">🔗 Havola</button></h3>${statsBox(id)}<div class="row"><span>Keyingi qavat: <b>🪙 ${fmt(c)}</b></span></div><button class="big y" ${me.coins<c?'disabled':''} onclick="buyF('${id}')">Qavat sotib olish</button><div style="display:flex;gap:8px;margin-top:8px">${[5,10].map(n=>{const cn=costN(b,n);return `<button class="y" style="flex:1;padding:12px 6px" ${me.coins<cn?'disabled':''} onclick="buyF('${id}',${n})">+${n} qavat<br><small style="font-weight:700">🪙 ${fmt(cn)}</small></button>`}).join('')}</div>
    <div style="margin-top:12px"><b>🎨 Bino uslubi</b></div><div style="display:flex;gap:6px;margin-top:6px">${[['classic','🧱','Klassik'],['glass','🪟','Shisha'],['neon','💡','Neon'],['gold','👑','Oltin']].map(([k,e,n])=>{const cur=(b.st||(b.gold?'gold':'classic'))===k,own=stOwn(b,k);return `<div onclick="setSt('${id}','${k}')" style="flex:1;text-align:center;padding:10px 2px;border-radius:12px;border:2px solid ${cur?'var(--pr)':'var(--bd)'};background:${cur?'rgba(30,136,229,.12)':'var(--bg)'};cursor:pointer"><div style="font-size:24px">${e}</div><b style="font-size:13px">${n}</b><br><small>${cur?'✓ Hozir':own?'Ochiq':'🪙 '+fmt(STP[k])}</small></div>`}).join('')}</div>
    <div style="margin-top:12px"><b>🏪 Do‘kon turi</b> <small class="mu">— nikingiz ustida chiqadi</small></div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px">${SHOPS.map(([k,e,n])=>`<div onclick="updB('${id}',{sh:'${k}'})" style="text-align:center;padding:8px 2px;border-radius:12px;border:2px solid ${b.sh===k?'var(--pr)':'var(--bd)'};background:${b.sh===k?'rgba(30,136,229,.12)':'var(--bg)'};cursor:pointer"><div style="font-size:24px">${e}</div><small style="font-size:11px">${n}</small></div>`).join('')}</div><div class="sw" style="margin-top:12px">${COLORS.map(c=>`<i style="background:${c}" onclick="updB('${id}',{color:'${c}'})"></i>`).join('')}</div><div class="row">${TYPES.map(([k,n])=>`<button class="${(b.type||'glass')===k?'':'g'}" style="flex:1;padding:9px 4px" onclick="updB('${id}',{type:'${k}'})">${n}</button>`).join('')}</div><div class="row"><input id="lb_${id}" maxlength="20" placeholder="Bino nomi (xohlagan nom, 20 belgigacha)" value="${esc(b.label||'')}"><button onclick="setLabel('${id}')">Saqlash</button></div>
    <div class="row" style="margin-top:12px">${b.sale?`<span class="tag">Sotuvda${b.sale!=='Sotuvda'?' · '+esc(b.sale):''}</span><button class="g" onclick="updB('${id}',{sale:''})">Sotuvdan olish</button>`:`<button onclick="sell('${id}')">🏷 Sotuvga qo‘yish</button><small>Narxni xaridor bilan Telegramda kelishasiz</small>`}</div></div>`}).join('')||'<div class="card">Sizda bino yo‘q. Savdo bo‘limidan sotib oling.</div>';
