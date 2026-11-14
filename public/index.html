@@ -154,7 +154,8 @@ function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(isAdmin&&!me.ci&&bs[uid]){p.ci=1;col('b').doc(uid).update({ctr:true,sale:'200 000 so‘m'}).catch(()=>{})}
  if(Object.keys(p).length)col('players').doc(uid).update(p)}
 const costN=(b,n)=>{let t=0;for(let k=0;k<n;k++)t+=price(b.floors+k,b.gold);return t};
-function buyF(id,n=1){n=[1,5,10].includes(n)?n:1;const b=bs[id];if(!b||b.owner!==uid)return;const c=costN(b,n);if(me.coins<c)return toast('Coin yetarli emas');updB(id,{floors:b.floors+n});upd({coins:me.coins-c,m:prog('floor',n),...wkInc(n)});toast(n>1?'+'+n+' qavat! 🎉':'Yangi qavat! 🎉')}
+function buyF(id,n=1){n=[1,5,10].includes(n)?n:1;const b=bs[id];if(!b||b.owner!==uid)return;const c=costN(b,n);if(me.coins<c)return toast('Coin yetarli emas');const o0={coins:me.coins,m:me.m,wk:me.wk,wp:me.wp},p={coins:me.coins-c,m:prog('floor',n),...wkInc(n)},cb=me.coins;if(window.__bf)return;window.__bf=1;Object.assign(me,p);players[uid]=me;render();
+ col('players').doc(uid).update(p,cb).then(()=>{window.__bf=0;updB(id,{floors:(bs[id]?bs[id].floors:b.floors)+n});toast(n>1?'+'+n+' qavat! 🎉':'Yangi qavat! 🎉')}).catch(e=>{window.__bf=0;Object.assign(me,o0);players[uid]=me;render();toast((e&&e.message)||'Bajarilmadi')})}
 const CAP=200,CCAP=40,CRATE=[10,5,3],NEWD=3*864e5;
 // Sandiq: har 1 soniyada, mijoz: har 10 soniyada (hamma uchun)
 const SGf=()=>1e3,CGf=()=>1e4;
