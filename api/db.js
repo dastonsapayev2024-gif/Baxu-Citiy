@@ -115,7 +115,7 @@ async function cleanChat(pool) {
 }
 
 // ---- Eski xabarlar (5 soat) va 10 kun kirmagan o'yinchilarning binolari (10 daqiqada 1 marta) ----
-const INBOX_TTL = 5 * 60 * 60 * 1000, IDLE_TTL = 10 * 24 * 60 * 60 * 1000;
+const INBOX_TTL = 5 * 60 * 60 * 1000, IDLE_TTL = 10 * 24 * 60 * 60 * 1000, IDLE_CLEAN = false;
 let lastOld = 0;
 async function cleanOld(pool) {
   if (Date.now() - lastOld < 600000) return;
@@ -129,7 +129,8 @@ async function cleanOld(pool) {
     await pool.query("delete from docs where col='act' and updated<$1", [Date.now() - 10 * 864e5]);
     const rz = await pool.query("delete from docs where col='bz' and updated<$1", [Date.now() - 3 * 864e5]);
     if (rz.rowCount) ch = 1;
-    const q = await pool.query("select b.id, b.data bd from docs b join docs p on p.col='players' and p.id=b.data->>'owner' where b.col='b' and b.id=b.data->>'owner' and coalesce((b.data->>'ctr')::boolean,false)=false and coalesce((p.data->>'adm')::boolean,false)=false and coalesce((p.data->>'blocked')::boolean,false)=false and greatest(coalesce((p.data->>'seen')::bigint,0), p.updated) < $1 limit 50", [Date.now() - IDLE_TTL]);
+    // Kirmagan o'yinchilarning binosi O'CHIRILMAYDI (IDLE_CLEAN=false)
+    const q = IDLE_CLEAN ? await pool.query("select b.id, b.data bd from docs b join docs p on p.col='players' and p.id=b.data->>'owner' where b.col='b' and b.id=b.data->>'owner' and coalesce((b.data->>'ctr')::boolean,false)=false and coalesce((p.data->>'adm')::boolean,false)=false and coalesce((p.data->>'blocked')::boolean,false)=false and greatest(coalesce((p.data->>'seen')::bigint,0), p.updated) < $1 limit 50", [Date.now() - IDLE_TTL]) : { rows: [] };
     for (const row of q.rows) {
       // bino nusxasi o'yinchi hujjatiga saqlanadi: qaytib kirsa tiklanadi
       await pool.query("update docs set data=jsonb_set(data,'{ab}',$2::jsonb,true), updated=$3 where col='players' and id=$1", [row.id, JSON.stringify(row.bd), Date.now()]);
