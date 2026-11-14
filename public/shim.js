@@ -30,6 +30,26 @@
 
   var wseq = 0, busy = false, timer = null, uid = null, admin = false, idle = 0, fails = 0;
   var cache = {}, ver = {}, subs = {};
+  // Tez ochilish: oxirgi ma'lumot telefonda saqlanadi, keyingi safar o'yin darrov ochiladi (server faqat o'zgarganini yuboradi)
+  var CK = null, svT = 0, PRE = null;
+  try {
+    var tu = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+    if (tu && tu.id) {
+      CK = 'bc2_' + tu.id;
+      var sv = JSON.parse(localStorage.getItem(CK) || 'null');
+      if (sv && sv.c && sv.v && typeof sv.t === 'number' && _N.call(_D) - sv.t < 3 * 864e5 && sv.c.players && sv.v.players) { cache = sv.c; ver = sv.v; if (typeof sv.u === 'string' && sv.u) PRE = { u: sv.u, a: !!sv.a, l: sv.l || '' }; }
+    }
+  } catch (e) { cache = {}; ver = {}; }
+  function save() {
+    if (!CK || svT) return;
+    svT = setTimeout(function () {
+      svT = 0;
+      try {
+        var s = JSON.stringify({ t: _N.call(_D), c: cache, v: ver, u: uid || (PRE && PRE.u) || '', a: admin, l: window.APP_LINK || '' });
+        if (s.length < 2500000) localStorage.setItem(CK, s); else localStorage.removeItem(CK);
+      } catch (e) { try { localStorage.removeItem(CK); } catch (_) {} }
+    }, 2500);
+  }
 
   function raw(body, ms) {
     var h = { 'content-type': 'application/json' };
@@ -114,6 +134,7 @@
         emit(c);
       });
       if (redo) kick(0);
+      if (ks.length) save();
     }).catch(function (e) { fails++; if (fails >= 3) errAll(e); }).then(function () { busy = false; });
   }
   function kick(ms) { setTimeout(sync, ms || 0); }
@@ -176,6 +197,16 @@
 
   var initP = null;
   function init() {
+    if (!initP && PRE) {
+      // Oldingi kirishdan uid ma'lum: o'yin darrov ochiladi, serverdan tasdiqlash fonda boradi
+      uid = PRE.u; admin = PRE.a; if (PRE.l) window.APP_LINK = PRE.l;
+      initP = Promise.resolve(true);
+      api({ op: 'me' }).then(function (r) {
+        if (r.uid !== uid) { try { localStorage.removeItem(CK); } catch (e) {} location.reload(); return; }
+        admin = !!r.admin; if (r.appLink) window.APP_LINK = r.appLink;
+      }).catch(function () {});
+      return initP;
+    }
     if (!initP) initP = api({ op: 'me' }).then(function (r) {
       uid = r.uid; admin = !!r.admin;
       if (r.appLink) window.APP_LINK = r.appLink;
@@ -191,4 +222,6 @@
       });
     }
   };
+  // O'yin kodi yuklanguncha (three.js va katta skript) serverga so'rovlarni oldindan yuboramiz
+  init(); start();
 })();
