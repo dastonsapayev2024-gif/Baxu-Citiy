@@ -199,7 +199,7 @@ module.exports = async (req, res) => {
       const out = {};
       // Faqat o'zgargan bo'limlar; ommaviy bo'limlarda faqat o'zgargan hujjatlar (delta)
       const DELTA = ['players', 'b', 'likes', 'chat', 'trades', 'config', 'approvals', 'aid', 'bz', 'act'];
-      const RESTR = { inbox: "data->>'to'=$2", orders: "data->>'uid'=$2", cq: "data->>'uid'=$2", reqs: "(data->>'from'=$2 or data->>'to'=$2)" };
+      const RESTR = { inbox: "data->>'to'=$2", orders: "data->>'uid'=$2", cq: "data->>'uid'=$2", reqs: "(data->>'from'=$2 or data->>'to'=$2 or exists(select 1 from docs bb where bb.col='b' and bb.id=docs.data->>'b' and bb.data->>'owner'=$2))" };
       for (const c of cols) {
         const k = cur[c] || { v: 0, n: 0 };
         const o = vs[c];
@@ -215,7 +215,7 @@ module.exports = async (req, res) => {
           }
           if (!delta) rows = await fullRows(pool, c, k);
         }
-        out[c] = { v: k.v, n: k.n, delta, docs: rows.filter(x => L.visible(c, x.data, a)).map(x => ({ id: x.id, data: slim(x) })) };
+        out[c] = { v: k.v, n: k.n, delta, docs: rows.filter(x => (c === 'reqs' && !a.admin && RESTR[c]) || L.visible(c, x.data, a)).map(x => ({ id: x.id, data: slim(x) })) };
       }
       return res.json({ now: Date.now(), cols: out });
     }
@@ -279,6 +279,12 @@ module.exports = async (req, res) => {
         else if (b.op !== 'delete') nd = patch;
         if (nd && JSON.stringify(nd).length > (col === 'orders' || col === 'reqs' ? 150000 : 30000)) { await cl.query('rollback'); return bad(res, 413, 'Juda katta'); }
         // Hokim so'rovni tasdiqlaydi/rad etadi: faqat faol hokim, kuniga 10 ta, TOP-5 dan pastdagilarga 4000 coin (server tekshiradi)
+        // Bino egasi o'z binosiga kelgan so'rovlarni (egasi o'zgargan bo'lsa ham) o'chira oladi (rad etish/tasdiqlash)
+        let reqOk = false;
+        if (col === 'reqs' && !a.admin && b.op === 'delete' && old && typeof old.b === 'string') {
+          const ob = await cl.query("select data->>'owner' o from docs where col='b' and id=$1", [old.b]);
+          reqOk = !!(ob.rows[0] && ob.rows[0].o === a.uid);
+        }
         let mayorOk = false;
         if (col === 'aid' && !a.admin && old && b.op === 'update') {
           const bye = async m => { await cl.query('rollback'); return bad(res, 403, m); };
@@ -346,7 +352,7 @@ module.exports = async (req, res) => {
           const okF = ['chat', 'likes', 'inbox'].includes(col) || (col === 'players' && id === a.uid && old && nd && b.op !== 'delete' && ['coins', 'wk', 'wp', 'pz', 'gf'].every(same));
           if (!okF) { await cl.query('rollback'); return bad(res, 403, 'Fasl tugadi. 2-fasl g‘oliblari aniqlanmoqda'); }
         }
-        if (!mayorOk && !bzOk && !L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
+        if (!mayorOk && !bzOk && !reqOk && !L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
         if (!a.admin && col === 'players' && id === a.uid && b.op !== 'delete' && old && patch && patch.coins !== undefined) {
           const why = L.cheat(old, nd);
           if (why) {
