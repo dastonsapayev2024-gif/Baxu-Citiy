@@ -35,7 +35,7 @@ const AGG = new Map();
 function aggregate(pool, cols) {
   const key = cols.join(',');
   const e = AGG.get(key);
-  if (e && Date.now() - e.t < 800) return e.p;
+  if (e && Date.now() - e.t < 1500) return e.p;
   const p = pool.query('select col,max(updated)::text v,count(*)::int n from docs where col=any($1) group by col', [cols]).then(r => r.rows);
   const ne = { t: Date.now(), p };
   AGG.set(key, ne);
@@ -57,6 +57,7 @@ function fullRows(pool, c, k) {
 // Delta so'rovlari: bir xil versiyadagi o'yinchilar bitta bazadan o'qishni bo'lishadi (Neon trafigini kamaytiradi)
 const DLT = new Map();
 function deltaRows(pool, c, from, to) {
+  from = Math.floor((from - 5000) / 4000) * 4000 + 5000; // bir xil oraliqdagi o'yinchilar bitta o'qishni bo'lishadi
   const key = c + '|' + from + '|' + to;
   const e = DLT.get(key);
   if (e) return e;
@@ -71,7 +72,7 @@ function deltaRows(pool, c, from, to) {
 const BL = new Map();
 async function isBlocked(pool, uid) {
   const e = BL.get(uid);
-  if (e && Date.now() - e.t < 5000) return e.b;
+  if (e && Date.now() - e.t < 15000) return e.b;
   const r = await pool.query("select data->>'blocked' b from docs where col='players' and id=$1", [uid]);
   const b = !!(r.rows[0] && r.rows[0].b === 'true');
   BL.set(uid, { t: Date.now(), b });
