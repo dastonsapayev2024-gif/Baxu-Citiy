@@ -212,12 +212,11 @@ function bcard(id){const b=bs[id],o=players[b.owner]||{},hc=me.hc&&me.hc.day===t
  <div style="display:flex;gap:12px;align-items:center;padding-right:40px"><div style="flex:0 0 54px;height:54px;border-radius:17px;background:linear-gradient(160deg,#c4b0ff,#9b7bff);box-shadow:0 3px 0 #8764e6;display:flex;align-items:center;justify-content:center;font-size:30px">${sh?sh[1]:'🏢'}</div>
  <div style="min-width:0"><div style="font-size:18px;font-weight:900;color:#231a5c;line-height:1.15;overflow-wrap:anywhere">${esc(b.label||bname(b))}</div><div style="color:#8a82b8;font-weight:700;font-size:13px;margin-top:2px">${sh?esc(sh[2])+' · ':''}${o.tg?'@'+esc(String(o.tg).replace('@','')):esc(o.name||'')}</div><span class="bsp">🏢 ${esc(ty)}</span>${b.sale?`<span class="bsp" style="background:#fff0d6;color:#a45a00">🏷️ ${esc(b.sale)}</span>`:''}<button class="bsl" onclick="copyLink('${id}')">🔗 Havola</button>${o.tg?`<a class="bsl" href="https://t.me/${esc(String(o.tg).replace('@',''))}" target="_blank" style="text-decoration:none">✈️ Telegram</a>`:''}</div></div>
  <div style="display:flex;gap:6px;margin:10px 0 8px">${stat(b.floors,'qavat')}${stat(lc(id),'layk')}${stat(vc(id),'kirish')}${stat('#'+rankOf(id),'balandlik')}</div>
- `+
+ `+(mine?'':`<div style="margin:0 0 8px">${b.sale?`<button class="bsb bbl" onclick="buyPaid('${id}')">🛒 Sotib olish — ${esc(b.sale)}</button>`:`<button class="bsb bbl" onclick="buyBtn('${id}')">🛒 Sotib olmoqchiman (so‘rash)</button>`}</div>`)+
  (mine?'<div style="text-align:center;color:#8a82b8;font-weight:700;padding:6px">Bu sizning binoingiz</div>':`
  <div class="bsg"><button class="bsb bgr" onclick="help('${b.owner}')">🤝 Yordam berish <span class="bsc">${GIFT} 🪙</span></button><div class="bss" style="color:#1b7a3d">Bugun yana ${Math.max(0,HLIM-hc)} ta yordam</div></div>
  <button class="bsb bpk" style="margin:7px 0" onclick="toggleLike('${id}')">❤️ Layk bosish${iL(id)?' ✓':''}</button>
- ${nob?'':`<div class="bsg bor"><button class="bsb bog" ${bzOff?'style="opacity:.55"':''} onclick="bzDo('${id}')">💥 1 qavat buzish <span class="bsc">${fmt(BZ_COST)} 🪙</span></button><div class="bss" style="color:#b23a1a">Siz bugun yana ${Math.max(0,BZ_DAILY-k.my)} qavat buza olasiz · bu bino yana ${Math.max(0,BZ_PER_B-k.bn)} marta</div></div>`}
- <div style="margin-top:7px">${b.sale?`<button class="bsb bbl" onclick="buyPaid('${id}')">🛒 Sotib olish — ${esc(b.sale)}</button>`:`<button class="bsb bbl" onclick="buyBtn('${id}')">🛒 Sotib olmoqchiman (so‘rash)</button>`}</div>`)+`</div>`+(buyS===id&&b.sale&&b.owner!==uid?buySheet(id):'')}
+ ${nob?'':`<div class="bsg bor"><button class="bsb bog" ${bzOff?'style="opacity:.55"':''} onclick="bzDo('${id}')">💥 1 qavat buzish <span class="bsc">${fmt(BZ_COST)} 🪙</span></button><div class="bss" style="color:#b23a1a">Siz bugun yana ${Math.max(0,BZ_DAILY-k.my)} qavat buza olasiz · bu bino yana ${Math.max(0,BZ_PER_B-k.bn)} marta</div></div>`}`)+`</div>`+(buyS===id&&b.sale&&b.owner!==uid?buySheet(id):'')}
 const COLORS=['#42a5f5','#26c6da','#66bb6a','#ffa726','#ef5350','#ab47bc','#ec407a','#8d6e63','#78909c','#fdd835'],TYPES=[['glass','Shisha'],['tower','Minora'],['wide','Keng'],['step','Zinapoya']];
 const STP={glass:1000,neon:2000,gold:5000},isG=b=>b.gold&&(!b.st||b.st==='gold'),stOwn=(b,k)=>k==='classic'||(k==='gold'?!!b.gold:(b.us||[]).includes(k));
 function setSt(id,k){const b=bs[id];if(!b||b.owner!==uid)return;if((b.st||(b.gold?'gold':'classic'))===k)return;
@@ -235,7 +234,7 @@ function reqBuy(id){freshB(id).then(b=>{if(!b||b.owner===uid)return;return col('
 function give(rid){const r=reqs.find(x=>x.id===rid),b=r&&bs[r.b];if(!b||b.owner!==uid)return;
  ask(r.fromName+' ga binoni o‘tkazasizmi?\n\nTelegramda kelishib, pulni olganingizga ishonch hosil qiling.',()=>{
  const nm=bname(b);
- col('b').doc(r.b).update({owner:r.from,sale:'',card:''}).catch(e=>toast('Xato: '+(e.message||e)));
+ col('b').doc(r.b).update({owner:r.from,sale:'',card:'',label:''}).catch(e=>toast('Xato: '+(e.message||e)));
  col('trades').add({b:r.b,from:uid,to:r.from,fromName:me.name,toName:r.fromName,price:r.price,floors:b.floors,ts:Date.now()});
  notify(r.from,'deal','🎉 «'+nm+'» binosi sizga o‘tkazildi!');
  reqs.filter(x=>x.b===r.b).forEach(x=>{if(x.id!==rid)notify(x.from,'no','«'+nm+'» binosi boshqa xaridorga sotildi');col('reqs').doc(x.id).delete().catch(()=>{})});toast('Bino o‘tkazildi ✓')})}
