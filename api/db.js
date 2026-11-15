@@ -369,6 +369,8 @@ module.exports = async (req, res) => {
             if (typeof nd[k] === 'number') { let v = nd[k]; if (typeof old[k] === 'number' && v < old[k]) v = old[k]; if (v > sn) v = sn; nd[k] = v; }
           }
         }
+        // Egasi o'zgarganda eski egasining bino nomi (label) o'chiriladi
+        if (col === 'b' && b.op !== 'delete' && old && nd && nd.owner && old.owner !== nd.owner && !nd.ctr) delete nd.label;
         if (b.op === 'delete') await cl.query('delete from docs where col=$1 and id=$2', [col, id]);
         else await cl.query(
           'insert into docs(col,id,data,updated) values($1,$2,$3,$4) on conflict(col,id) do update set data=excluded.data,updated=excluded.updated',
@@ -376,7 +378,7 @@ module.exports = async (req, res) => {
         // Bino sotib olinganda xaridorning avvalgi binosi(lari) sotuvchiga o'tadi (almashinuv); faqat sotib olingan bino xaridorda qoladi
         if (col === 'b' && b.op !== 'delete' && old && nd && nd.owner && old.owner !== nd.owner && !nd.ctr) {
           if (typeof old.owner === 'string' && !old.ctr) {
-            await cl.query("update docs set data=jsonb_set(jsonb_set(data,'{owner}',to_jsonb($3::text)),'{sale}','\"\"'::jsonb), updated=$4 where col='b' and id<>$1 and data->>'owner'=$2 and coalesce((data->>'ctr')::boolean,false)=false", [id, String(nd.owner), old.owner, Date.now()]);
+            await cl.query("update docs set data=jsonb_set(jsonb_set(data,'{owner}',to_jsonb($3::text)),'{sale}','\"\"'::jsonb) - 'label', updated=$4 where col='b' and id<>$1 and data->>'owner'=$2 and coalesce((data->>'ctr')::boolean,false)=false", [id, String(nd.owner), old.owner, Date.now()]);
           } else {
             await cl.query("delete from docs where col='b' and id<>$1 and data->>'owner'=$2 and coalesce((data->>'ctr')::boolean,false)=false", [id, String(nd.owner)]);
           }
