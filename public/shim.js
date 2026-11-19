@@ -142,9 +142,9 @@
   function tick() {
     if (!document.hidden) sync();
     var co = chatOpen();
-    var d = fails ? Math.min(30000, 3000 * Math.pow(2, Math.min(fails, 4))) : (co ? (idle > 10 ? 10000 : 4500) : (idle > 10 ? 15000 : 6500));
+    var d = fails ? Math.min(30000, 3000 * Math.pow(2, Math.min(fails, 4))) : (co ? (idle > 10 ? 10000 : 6000) : (idle > 10 ? 30000 : 12000));
     // Harakatsiz o'yinchi (60 s ekranga tegmagan, chat yopiq): so'rov orasi uzayadi
-    if (!fails && Date.now() - lastAct > 60000 && !co) d = idle > 10 ? 60000 : 30000;
+    if (!fails && Date.now() - lastAct > 60000 && !co) d = idle > 10 ? 150000 : 60000;
     timer = setTimeout(tick, d + Math.random() * 1000);
   }
   var lastAct = Date.now();
