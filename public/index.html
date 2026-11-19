@@ -806,7 +806,7 @@ try{init3()}catch(e){$('#map').insertAdjacentHTML('afterbegin','<div class="card
   'use strict';
   if (window.S2) return;
   var S2 = window.S2 = {
-    opt: { snow: true, snowN: 3200, lights: true, cycle: 720, manual: null, hud: true, every: 3600, stormLen: 360, base: .12, maxCap: 2.4 },
+    opt: { snow: true, snowN: 3200, lights: true, cycle: 720, manual: null, hud: true, every: 3600, stormLen: 180, base: .12, maxCap: 2.4 },
     on: false, hour: 12, night: 0, ready: false
   };
   var T = window.THREE;
@@ -1109,10 +1109,10 @@ try{init3()}catch(e){$('#map').insertAdjacentHTML('afterbegin','<div class="card
   setInterval(function(){
    try{
     var k=(window.S2&&S2.on&&S2.k)||0;
-    if(!sOn||!AC||document.hidden||k<.01){if(G){G.gain.value=0;G2.gain.value=0}return}
+    if(!sOn||!AC||document.hidden||k<.08){if(G){G.gain.value=0;G2.gain.value=0}return}
     mk();if(!G)return;
     var t=Date.now()/1000,g=.72+.28*Math.sin(t*.9)*Math.sin(t*.37+1);
-    var v=Math.min(1,k)*g;
+    var v=Math.min(1,(k-.08)/.92)*g;
     G.gain.value=v*.55;G2.gain.value=v*v*.09;
     W._f.frequency.value=330+260*v;
     LF=v;
