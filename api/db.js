@@ -245,6 +245,13 @@ module.exports = async (req, res) => {
       return res.json({ now: Date.now(), ok, fail, next: off + ids.length, done: b.test ? true : ids.length < LIM });
     }
 
+    if (b.op === 'dbsize') {
+      if (!a.admin) return bad(res, 403, 'Ruxsat yo‘q');
+      const t = await pool.query('select pg_database_size(current_database())::bigint as total');
+      const c = await pool.query("select col, count(*)::int n, coalesce(sum(pg_column_size(data)),0)::bigint bytes from docs group by col order by 3 desc limit 12");
+      const pl = await pool.query("select count(*)::int n from docs where col='players'");
+      return res.json({ total: Number(t.rows[0].total), cols: c.rows.map(x => ({ col: x.col, n: x.n, bytes: Number(x.bytes) })), players: pl.rows[0].n, limit: Number(process.env.DB_LIMIT_BYTES || 5368709120) });
+    }
     // 2-fasl: hammasini BITTA tranzaksiyada o'tkazish (admin). b.co = {uid: coin}, b.mdl = {uid: o'rin}, b.def = qolganlar coini
     if (b.op === 's2') {
       if (!a.admin) return bad(res, 403, 'Ruxsat yo‘q');
