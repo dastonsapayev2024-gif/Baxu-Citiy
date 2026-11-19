@@ -245,6 +245,30 @@ module.exports = async (req, res) => {
       return res.json({ now: Date.now(), ok, fail, next: off + ids.length, done: b.test ? true : ids.length < LIM });
     }
 
+    // 2-fasl: hammasini BITTA tranzaksiyada o'tkazish (admin). b.co = {uid: coin}, b.mdl = {uid: o'rin}, b.def = qolganlar coini
+    if (b.op === 's2') {
+      if (!a.admin) return bad(res, 403, 'Ruxsat yo‘q');
+      const co = b.co && typeof b.co === 'object' && !Array.isArray(b.co) ? b.co : {}, mdl = b.mdl && typeof b.mdl === 'object' && !Array.isArray(b.mdl) ? b.mdl : {};
+      const def = Math.max(0, Math.floor(+b.def || 0)), now = Date.now();
+      const clean = {}; Object.keys(co).forEach(k => { const v = Math.floor(+co[k]); if (v >= 0 && v < 1e9) clean[k] = v; });
+      const cm = {}; Object.keys(mdl).forEach(k => { const v = Math.floor(+mdl[k]); if (v >= 1 && v <= 10) cm[k] = v; });
+      const cl = await pool.connect();
+      try {
+        await cl.query('begin');
+        const PL = "col='players' and coalesce(data->>'adm','false')<>'true' and coalesce(data->>'purged','false')<>'true'";
+        // zaxira (eng birinchisi saqlanadi)
+        await cl.query("insert into docs(col,id,data,updated) select 'config','s1bak', jsonb_build_object('at',$1::bigint,'d',coalesce((select jsonb_object_agg(p.id, jsonb_build_array(coalesce((p.data->>'coins')::numeric,0), coalesce((select max((x.data->>'floors')::int) from docs x where x.col='b' and x.data->>'owner'=p.id),0))) from docs p where p." + PL.replace(/data->>/g, 'data->>') + "),'{}'::jsonb)), $1::bigint on conflict(col,id) do nothing", [now]);
+        const up = await cl.query("update docs set data = data || jsonb_build_object('coins', coalesce(($2::jsonb->>id)::numeric, $3::numeric), 's2', 1) || case when $4::jsonb ? id then jsonb_build_object('mdl', ($4::jsonb->>id)::int) else '{}'::jsonb end, updated=$1 where " + PL, [now, JSON.stringify(clean), def, JSON.stringify(cm)]);
+        const bu = await cl.query("update docs d set data = d.data || '{\"floors\":1,\"sale\":\"\",\"card\":\"\"}'::jsonb, updated=$1 where d.col='b' and coalesce((d.data->>'ctr')::boolean,false)=false and not exists (select 1 from docs p where p.col='players' and p.id=d.data->>'owner' and p.data->>'adm'='true')", [now]);
+        // xabar (inbox): har bir o'yinchiga bitta
+        await cl.query("insert into docs(col,id,data,updated) select 'inbox', md5(random()::text||p.id||clock_timestamp()::text), jsonb_build_object('to',p.id,'from',$2::text,'fromName','Baxu City','fromTg','','type','coin','text','🏁 2-fasl boshlandi! Binolar 1 qavatdan boshlandi, sizga '||(p.data->>'coins')||' coin berildi. Omad!','coins',(p.data->>'coins')::numeric,'ts',$1::bigint,'read',false), $1::bigint from docs p where p." + PL, [now, a.uid]);
+        await cl.query('commit');
+        AGG.clear(); BL.clear();
+        return res.json({ now, ok: true, players: up.rowCount, buildings: bu.rowCount });
+      } catch (e) { try { await cl.query('rollback'); } catch (_) {} throw e; }
+      finally { cl.release(); }
+    }
+
     const col = String(b.col || '');
     if (!L.KNOWN.includes(col)) return bad(res, 400, 'Noma’lum bo‘lim');
 
