@@ -1012,7 +1012,7 @@ try{init3()}catch(e){$('#map').insertAdjacentHTML('afterbegin','<div class="card
           o.material.color.set(P[11] > .5 ? '#7d8bb5' : P[11] > .1 ? '#e7c9c0' : '#ffffff'); o.material.opacity = .9 - .55 * P[11];
         }
       });
-      var sm_ = stormModel(); stormK += (sm_[0] - stormK) * Math.min(1, dt * 2.5); L += (sm_[1] - L) * Math.min(1, dt * 1.2); S2.storm_ = stormK; S2.cover = L;
+      var sm_ = stormModel(); stormK += (sm_[0] - stormK) * Math.min(1, dt * 2.5); S2.k = stormK; L += (sm_[1] - L) * Math.min(1, dt * 1.2); S2.storm_ = stormK; S2.cover = L;
       if (!S2._fog) S2._fog = [sc.fog.near, sc.fog.far];
       sc.fog.near = S2._fog[0] * (1 - .8 * stormK); sc.fog.far = S2._fog[1] * (1 - .55 * stormK);
       if (stormK > .02) { sc.fog.color.lerp(tmpA.set(P[11] > .4 ? '#3a4668' : '#d9e1ea'), .7 * stormK); }
@@ -1069,6 +1069,56 @@ try{init3()}catch(e){$('#map').insertAdjacentHTML('afterbegin','<div class="card
     try { if (snow) { sc.remove(snow); snow = null; SN = 0; } if (stars) stars.material.opacity = 0; if (moon) moon.material.opacity = 0; var m = document.getElementById('map'); if (m) m.style.background = ''; if (hud) hud.textContent = ''; } catch (e) { }
   };
   S2.setHour = function (h) { S2.opt.manual = (h == null ? null : ((h % 24) + 24) % 24); };
+})();
+</script>
+<script>/* Baxu City — 2-fasl tovushlari: qor bo'roni shamoli + Yangi yil musiqasi */
+(function(){
+ try{
+  /* ---- Yangi yil musiqasi (Jingle Bells, ommaviy mulk) ---- */
+  var C5=523,D5=587,E5=659,F5=698,G5=784,Z=0;
+  var MELN=[E5,Z,E5,Z,E5,Z,Z,Z, E5,Z,E5,Z,E5,Z,Z,Z, E5,Z,G5,Z,C5,Z,Z,D5, E5,Z,Z,Z,Z,Z,Z,Z,
+            F5,Z,F5,Z,F5,Z,Z,F5, F5,Z,E5,Z,E5,Z,E5,E5, E5,Z,D5,Z,D5,Z,E5,Z, D5,Z,Z,Z,G5,Z,Z,Z];
+  var CH=[[262,330,392],[262,330,392],[262,330,392],[262,330,392],[175,220,262],[175,220,262],[262,330,392],[196,247,294]],BS=[131,131,131,131,87,87,131,98];
+  window.musicTick=function(){
+   if(!sOn||!AC||document.hidden)return;
+   var n=mStep%64,bar=n>>3,st=n&7,c=CH[bar];
+   if(st%2===0)tn(c[(st>>1)%3]*2,0,.45,'sine',.18,MU);
+   if(st===0||st===4)tn(BS[bar],0,.8,'triangle',.4,MU);
+   var m=MELN[n];
+   if(m){tn(m,0,.55,'triangle',.38,MU);tn(m*2,0,.25,'sine',.16,MU);}
+   if(st%2===1)tn(2637+(n%3)*220,0,.12,'sine',.07,MU); /* chana qo'ng'iroqchalari */
+   mStep++;
+  };
+  /* ---- bo'ron shamoli ---- */
+  var W=null,G=null,G2=null,LF=0;
+  function mk(){
+   if(W||!AC)return;
+   var len=AC.sampleRate*2,b=AC.createBuffer(1,len,AC.sampleRate),d=b.getChannelData(0),l=0;
+   for(var i=0;i<len;i++){var w=Math.random()*2-1;l=(l+.02*w)/1.02;d[i]=l*3.5}  /* jigarrang shovqin */
+   W=AC.createBufferSource();W.buffer=b;W.loop=true;
+   var f=AC.createBiquadFilter();f.type='bandpass';f.frequency.value=420;f.Q.value=.6;
+   G=AC.createGain();G.gain.value=0;
+   W.connect(f);f.connect(G);G.connect(typeof MG!=='undefined'&&MG?MG:AC.destination);
+   var w2=AC.createBufferSource();w2.buffer=b;w2.loop=true;
+   var f2=AC.createBiquadFilter();f2.type='highpass';f2.frequency.value=1600;
+   G2=AC.createGain();G2.gain.value=0;
+   w2.connect(f2);f2.connect(G2);G2.connect(typeof MG!=='undefined'&&MG?MG:AC.destination);
+   W.start();w2.start();W._f=f;W._f2=f2;
+  }
+  setInterval(function(){
+   try{
+    var k=(window.S2&&S2.on&&S2.k)||0;
+    if(!sOn||!AC||document.hidden||k<.01){if(G){G.gain.value=0;G2.gain.value=0}return}
+    mk();if(!G)return;
+    var t=Date.now()/1000,g=.72+.28*Math.sin(t*.9)*Math.sin(t*.37+1);
+    var v=Math.min(1,k)*g;
+    G.gain.value=v*.55;G2.gain.value=v*v*.09;
+    W._f.frequency.value=330+260*v;
+    LF=v;
+   }catch(e){}
+  },200);
+  window.__stormSnd=function(){return LF};
+ }catch(e){console.warn('S2 audio',e)}
 })();
 </script>
 <script>try{window.S2&&S2.start()}catch(e){}</script>
