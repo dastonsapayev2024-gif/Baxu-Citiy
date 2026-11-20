@@ -385,6 +385,7 @@ module.exports = async (req, res) => {
           if (!okF) { await cl.query('rollback'); return bad(res, 403, 'Fasl tugadi. 2-fasl g‘oliblari aniqlanmoqda'); }
         }
         if (!mayorOk && !bzOk && !reqOk && !L.allowed(col, b.op, a, id, old, patch, nd)) { await cl.query('rollback'); return bad(res, 403, 'Ruxsat yo‘q'); }
+        if (!a.admin && col === 'players' && id === a.uid && b.op !== 'delete' && old && nd && old.gf === 1 && nd.gf === 2) { await cl.query('rollback'); return bad(res, 403, 'Sovg‘a bekor qilingan. Sahifani yangilang'); }
         if (!a.admin && col === 'players' && id === a.uid && b.op !== 'delete' && old && patch && patch.coins !== undefined) {
           const why = L.cheat(old, nd);
           if (why) {
