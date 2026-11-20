@@ -131,7 +131,7 @@ function prizeChk(){
 
 let giftBusy=0;
 const GIFT_FL=40,giftAmt=()=>{let t=0;for(let f=1;f<=GIFT_FL;f++)t+=price(f,false);return Math.min(250000,t)};
-function giftChk(){if(giftBusy||!me||me.gf!==1||me.blocked)return;giftBusy=1;const d=document.createElement('div');d.id='gift';d.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(5,10,30,.78);display:flex;align-items:center;justify-content:center;padding:20px';
+function giftChk(){return;if(giftBusy||!me||me.gf!==1||me.blocked)return;giftBusy=1;const d=document.createElement('div');d.id='gift';d.style.cssText='position:fixed;inset:0;z-index:99;background:rgba(5,10,30,.78);display:flex;align-items:center;justify-content:center;padding:20px';
  d.innerHTML='<style>@keyframes gbob{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-14px) rotate(4deg)}}@keyframes gpop{0%{transform:scale(.3);opacity:0}60%{transform:scale(1.25)}100%{transform:scale(1);opacity:1}}</style><div style="text-align:center;color:#fff;max-width:340px"><div style="font-size:22px;font-weight:800;margin-bottom:6px">Xush kelibsiz! 🎉</div><div style="opacity:.9;margin-bottom:18px">Yangi o‘yinchi sovg‘asi sizni kutmoqda</div><div id="gbox" style="font-size:130px;line-height:1;cursor:pointer;animation:gbob 1.2s ease-in-out infinite">🎁</div><div id="gtx" style="margin-top:18px;font-weight:700">Ochish uchun sovg‘ani bosing 👆</div></div>';
  document.body.appendChild(d);
  $('#gbox').onclick=()=>{if(!me||me.gf!==1)return;const b=$('#gbox');b.onclick=null;b.style.animation='gpop .6s both';b.textContent='🪙';$('#gtx').innerHTML='<div style="font-size:34px;font-weight:800;color:#ffd23f">+'+fmt(giftAmt())+' coin!</div><div style="opacity:.85;font-size:14px;margin-top:6px">'+GIFT_FL+' qavatgacha yetadi 🏙️</div><button id="gok" style="margin-top:16px;padding:12px 30px;border:0;border-radius:14px;background:#2ea44f;color:#fff;font-size:17px;font-weight:700">Rahmat!</button>';
@@ -145,7 +145,7 @@ function nickOk(n){return !Object.entries(players).some(([i,p])=>i!==uid&&String
 function tgAuto(){try{const u=window.Telegram.WebApp.initDataUnsafe.user;const t=u&&u.username?String(u.username):'';return t&&tgOk(t)?t:''}catch(e){return ''}}
 function join(){const n=$('#nick').value.trim().replace(/\s+/g,' ').slice(0,20);if(n.length<2)return toast('Nik kamida 2 ta belgi bo‘lsin');if(!isAdmin&&!nickOk(n))return toast('Bu nik band, boshqasini tanlang');const t=tgAuto();
  const c=`hsl(${Math.random()*360|0} 65% 55%)`;
- col('players').doc(uid).set({name:isAdmin?'Baxu':n,tg:t,coins:300,gf:1,color:c,blocked:false,adm:isAdmin,nb:true,ad:1,ald:today(),...(refId()?{ref:refId()}:{}),m:{day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}},hc:{day:'',n:0},ts:Date.now(),st:Date.now(),ct:Date.now()});
+ col('players').doc(uid).set({name:isAdmin?'Baxu':n,tg:t,coins:300,color:c,blocked:false,adm:isAdmin,nb:true,ad:1,ald:today(),...(refId()?{ref:refId()}:{}),m:{day:mper(),p:{login:1,tap:0,floor:0,chat:0},c:{}},hc:{day:'',n:0},ts:Date.now(),st:Date.now(),ct:Date.now()});
  col('b').doc(uid).set({owner:uid,floors:1,color:c,sale:'',ts:Date.now()})}
 function chk(){if(!(rp&&rb&&me)||mig)return;mig=true;const p={seen:Date.now()};
  if(!me.st){p.st=Date.now();p.ct=Date.now()}
